@@ -1,0 +1,19 @@
+[project]
+name = "ragnar"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "qdrant-client>=1.9.0",
+  "markdown-it-py>=3.0.0",
+  "PyYAML>=6.0.1",
+  "numpy>=1.26.0",
+  "requests>=2.31.0",
+  "tiktoken>=0.7.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ragnar*"]
