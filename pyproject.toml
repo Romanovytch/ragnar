@@ -2,6 +2,9 @@
 name = "ragnar"
 version = "0.1.0"
 requires-python = ">=3.10"
+description = "RAG utilities and app backend for CanaR (Insee)"
+readme = "README.md"
+
 dependencies = [
   "qdrant-client>=1.9.0",
   "markdown-it-py>=3.0.0",
@@ -9,7 +12,11 @@ dependencies = [
   "numpy>=1.26.0",
   "requests>=2.31.0",
   "tiktoken>=0.7.0",
+  "python-dotenv>=1.0",
 ]
+
+[project.scripts]
+ragnar-ingest = "ragnar.ingest_utilitr:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

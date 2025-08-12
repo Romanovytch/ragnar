@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 from markdown_it import MarkdownIt
-from .util import count_tokens
+from ragnar.util import count_tokens
 
 
 @dataclass

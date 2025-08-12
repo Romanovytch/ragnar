@@ -38,7 +38,7 @@ def build_chunks_for_doc(text: str, base_meta: dict, chunker: MarkdownChunker) -
 
 def main():
     load_dotenv()
-    ap = argparse.ArgumentParser("Ingest utilitR into Qdrant (remote embeddings)")
+    ap = argparse.ArgumentParser("Ingest documents into Qdrant (remote embeddings)")
     ap.add_argument("--repo-path", required=True)
     ap.add_argument("--collection", required=True)
     ap.add_argument("--qdrant-url", default=os.getenv("QDRANT_URL", "http://localhost:6333"))
