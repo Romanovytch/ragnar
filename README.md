@@ -51,9 +51,10 @@ git clone https://github.com/InseeFrLab/utilitR.git
 To launch data ingestion, you can use multiple parameters that are listed by `ragnar-ingest --help`
 
 ```
-usage: Ingest docs into Qdrant (remote embeddings) [-h] --repo-path REPO_PATH --collection COLLECTION [--qdrant-url QDRANT_URL] [--qdrant-api-key QDRANT_API_KEY] [--drop-collection]
-                                                   [--target-tokens TARGET_TOKENS] [--overlap-tokens OVERLAP_TOKENS] [--max-tokens MAX_TOKENS] [--batch-size BATCH_SIZE] [--embed-api-base EMBED_API_BASE]
-                                                   [--embed-api-key EMBED_API_KEY] [--embed-model EMBED_MODEL] [--embed-timeout EMBED_TIMEOUT] [--embed-ca-bundle EMBED_CA_BUNDLE] [--embed-insecure]
+usage: Ingest utilitR into Qdrant (remote embeddings) [-h] --repo-path REPO_PATH --collection COLLECTION [--qdrant-url QDRANT_URL] [--qdrant-api-key QDRANT_API_KEY] [--drop-collection]
+                                                      [--target-tokens TARGET_TOKENS] [--overlap-tokens OVERLAP_TOKENS] [--max-tokens MAX_TOKENS] [--batch-size BATCH_SIZE] [--embed-api-base EMBED_API_BASE]
+                                                      [--embed-api-key EMBED_API_KEY] [--embed-model EMBED_MODEL] [--embed-timeout EMBED_TIMEOUT] [--embed-ca-bundle EMBED_CA_BUNDLE] [--embed-insecure]
+                                                      [--no-progress] [--log-level LOG_LEVEL]
 
 options:
   -h, --help            show this help message and exit
@@ -72,6 +73,9 @@ options:
   --embed-timeout EMBED_TIMEOUT
   --embed-ca-bundle EMBED_CA_BUNDLE
   --embed-insecure
+  --no-progress         Disable progress bars
+  --log-level LOG_LEVEL
+                        DEBUG, INFO, WARNING, ERROR
 ```
 
 `--embed-api-base`, `--embed-api-key`, `--embed-model`, `--qdrant-url`, `--qdrant-api-key` don't need to be specified if already set in `.env`.
