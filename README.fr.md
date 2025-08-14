@@ -1,12 +1,10 @@
 [🇫🇷 Français](README.fr.md) | [🇬🇧 English](README.md)
 
-# How to use RAGnaR
+# Comment utiliser RAGnaR ?
 
-RAGnaR is a data ingestion pipeline used to prepare data for Retrieval Augmented Generation for CanaR.
+## Initialisation de l'environnement virtuel
 
-## Virtual env setup
-
-(Optional) First you should use a virtual environment it's best practice:
+(Optionnel) C'est une bonne pratique, en python, d'utiliser un environnement virtuel :
 
 ```shell
 cd RAGnaR
@@ -14,43 +12,45 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-## Download dependencies
+## Installer les dépendances
 
-RAGnaR has a `requirements.txt` listing all the dependencies and their minimal versions and a `pyproject.toml` as well:
+RAGnaR a un `requirements.txt` listant toutes les dépendances et leur version minimale ainsi qu'un `pyproject.toml` :
 
 ```shell
 pip install -U pip
 pip install -e .
 ```
-Depending on your machine and network, it can take some time.
 
-## Environement variables
+Selon votre machine et votre réseau, cette opération peut prendre quelques minutes.
 
-You can either add the environment variables manually or add them in a `.env` file at the root of `ragnar/`.
+## Variables d'environnement
+
+Vous pouvez spécifier les variables d'environnement dans un fichier `.env` à la racine du projet.
+Le fichier `.env.example` vous donne un exemple de ce à quoi il devrait ressembler :
 
 ```
-# Embedding model env vars
+# Embeddings
 EMBED_API_BASE="https://my-embeddings-model-url/v1"
 EMBED_API_KEY="api-key"
 EMBED_MODEL="model-name"
 
-# Qdrand env vars
+# Qdrant
 QDRANT_API_KEY="api-key"
 QDRANT_URL="http://qdrant:6333"
 ```
 
-## Data
+## Données
 
-For now, RAGnaR is only stable for markdown documents ingestion. You will need to clone the repository containing the markdown documents locally.
+En l'état, RAGnaR ne supporte que les documents markdown dans un dossier local. Il faut donc cloner le projet à côté :
 
 ```shell
 cd ..
 git clone https://github.com/InseeFrLab/utilitR.git
-``` 
+```
 
-## Usage
+## Utilisation
 
-To launch data ingestion, you can use multiple parameters that are listed by `ragnar-ingest --help`
+Pour lancer l'ingestion des données, vous pouvez utiliser les paramètres listés par `ragnar-ingest --help` :
 
 ```
 usage: Ingest utilitR into Qdrant (remote embeddings) [-h] --repo-path REPO_PATH --collection COLLECTION [--qdrant-url QDRANT_URL] [--qdrant-api-key QDRANT_API_KEY] [--drop-collection]
@@ -80,15 +80,16 @@ options:
                         DEBUG, INFO, WARNING, ERROR
 ```
 
-`--embed-api-base`, `--embed-api-key`, `--embed-model`, `--qdrant-url`, `--qdrant-api-key` don't need to be specified if already set in `.env`.
+`--embed-api-base`, `--embed-api-key`, `--embed-model`, `--qdrant-url`, `--qdrant-api-key` n'ont pas besoin d'être spécifiés s'ils sont définis dans le `.env`.
 
-By default :
+Par défaut :
 * `--target-tokens` = 800
 * `--max-tokens` = 1200
 * `--overlap-tokens` = 120
 
-Example of usage :
+Exemple d'utilisation :
 ```shell
-# Read all .md from the utilitR project and create a Qdrant collection named "utilitr_v1"
+# Lit tous les fichiers markdown (.md) du repo et crée une collection Qdrant "utilitr_v1"
 ragnar-ingest --repo-path ../utilitR --collection utilitr_v1
 ```
+
