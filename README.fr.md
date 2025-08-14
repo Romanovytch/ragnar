@@ -2,6 +2,8 @@
 
 # Comment utiliser RAGnaR ?
 
+RAGnaR est une pipeline d'ingestion de données en CLI qui permet de faire du RAG sur l'application CanaR
+
 ## Initialisation de l'environnement virtuel
 
 (Optionnel) C'est une bonne pratique, en python, d'utiliser un environnement virtuel :
