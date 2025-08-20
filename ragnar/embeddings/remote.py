@@ -28,7 +28,7 @@ class RemoteOpenAIEncoder:
     """
 
     def __init__(self, api_base: str, model: str, api_key: str = "", timeout: float = 60.0,
-                 ca_bundle: Optional[str] = None, insecure: bool = False):
+                 ca_bundle: Optional[str] = None, insecure: bool = False) -> None:
         if not api_base or not api_base.startswith(("http://", "https://")):
             raise ValueError("api_base must start with http(s)://")
         self.url = api_base.rstrip("/") + "/embeddings"
@@ -58,7 +58,7 @@ class RemoteOpenAIEncoder:
             self._dim = int(v.shape[1])
         return self._dim
 
-    def encode(self, texts: List[str], batch_size: int = 64):
+    def encode(self, texts: List[str], batch_size: int = 64) -> np.ndarray:
         """Embed a list of strings and return L2-normalized vectors.
 
         Batches the input to reduce request size, performs POST requests to

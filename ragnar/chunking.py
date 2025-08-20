@@ -32,7 +32,8 @@ class MarkdownChunker:
         max_tokens: Hard ceiling for a chunk size (tokens).
     """
 
-    def __init__(self, target_tokens=800, overlap_tokens=120, max_tokens=1200):
+    def __init__(self, target_tokens: int = 800, overlap_tokens: int = 120,
+                 max_tokens: int = 1200) -> None:
         self.target = target_tokens
         self.overlap = overlap_tokens   # paragraph-only
         self.max_tokens = max_tokens

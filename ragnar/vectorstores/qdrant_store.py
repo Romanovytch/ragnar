@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
-from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue, ScoredPoint
 import numpy as np
 from ..chunking import Chunk
 
@@ -73,7 +73,7 @@ def upsert_dense(client: QdrantClient, collection: str, chunks: List[Chunk],
 
 
 def search_dense(client: QdrantClient, collection: str, query_vec: list[float], top_k: int = 5,
-                 source: str | None = None):
+                 source: str | None = None) -> List[ScoredPoint]:
     """Search nearest chunks by vector, optionally filtering by source. For testing.
 
     Args:
