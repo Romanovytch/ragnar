@@ -1,0 +1,2396 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../cli/">
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+    
+    
+      
+        <title>Python library - RAGnaR - Technical documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#python-library-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="RAGnaR - Technical documentation" class="md-header__button md-logo" aria-label="RAGnaR - Technical documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            RAGnaR - Technical documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Python library
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../../fr/reference/python/" hreflang="fr" class="md-select__link">
+              Français
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="RAGnaR - Technical documentation" class="md-nav__button md-logo" aria-label="RAGnaR - Technical documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    RAGnaR - Technical documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    CLI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Python library
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python library
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.chunking" class="md-nav__link">
+    <span class="md-ellipsis">
+      chunking
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="chunking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.chunking.MarkdownChunker" class="md-nav__link">
+    <span class="md-ellipsis">
+      MarkdownChunker
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MarkdownChunker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.chunking.MarkdownChunker.chunk" class="md-nav__link">
+    <span class="md-ellipsis">
+      chunk
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.chunking.MarkdownChunker.parse_units" class="md-nav__link">
+    <span class="md-ellipsis">
+      parse_units
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.embeddings.remote" class="md-nav__link">
+    <span class="md-ellipsis">
+      remote
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="remote">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      RemoteOpenAIEncoder
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RemoteOpenAIEncoder">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder.dim" class="md-nav__link">
+    <span class="md-ellipsis">
+      dim
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder.encode" class="md-nav__link">
+    <span class="md-ellipsis">
+      encode
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.vectorstores.qdrant_store" class="md-nav__link">
+    <span class="md-ellipsis">
+      qdrant_store
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="qdrant_store">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.vectorstores.qdrant_store.ensure_collection_dense" class="md-nav__link">
+    <span class="md-ellipsis">
+      ensure_collection_dense
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.vectorstores.qdrant_store.search_dense" class="md-nav__link">
+    <span class="md-ellipsis">
+      search_dense
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.vectorstores.qdrant_store.upsert_dense" class="md-nav__link">
+    <span class="md-ellipsis">
+      upsert_dense
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.sources.utilitr" class="md-nav__link">
+    <span class="md-ellipsis">
+      utilitr
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="utilitr">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.sources.utilitr.UtilitrSource" class="md-nav__link">
+    <span class="md-ellipsis">
+      UtilitrSource
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UtilitrSource">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.sources.utilitr.UtilitrSource.iter_docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      iter_docs
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.ingest_utilitr" class="md-nav__link">
+    <span class="md-ellipsis">
+      ingest_utilitr
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.chunking" class="md-nav__link">
+    <span class="md-ellipsis">
+      chunking
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="chunking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.chunking.MarkdownChunker" class="md-nav__link">
+    <span class="md-ellipsis">
+      MarkdownChunker
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MarkdownChunker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.chunking.MarkdownChunker.chunk" class="md-nav__link">
+    <span class="md-ellipsis">
+      chunk
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.chunking.MarkdownChunker.parse_units" class="md-nav__link">
+    <span class="md-ellipsis">
+      parse_units
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.embeddings.remote" class="md-nav__link">
+    <span class="md-ellipsis">
+      remote
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="remote">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      RemoteOpenAIEncoder
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RemoteOpenAIEncoder">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder.dim" class="md-nav__link">
+    <span class="md-ellipsis">
+      dim
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder.encode" class="md-nav__link">
+    <span class="md-ellipsis">
+      encode
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.vectorstores.qdrant_store" class="md-nav__link">
+    <span class="md-ellipsis">
+      qdrant_store
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="qdrant_store">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.vectorstores.qdrant_store.ensure_collection_dense" class="md-nav__link">
+    <span class="md-ellipsis">
+      ensure_collection_dense
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.vectorstores.qdrant_store.search_dense" class="md-nav__link">
+    <span class="md-ellipsis">
+      search_dense
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.vectorstores.qdrant_store.upsert_dense" class="md-nav__link">
+    <span class="md-ellipsis">
+      upsert_dense
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.sources.utilitr" class="md-nav__link">
+    <span class="md-ellipsis">
+      utilitr
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="utilitr">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.sources.utilitr.UtilitrSource" class="md-nav__link">
+    <span class="md-ellipsis">
+      UtilitrSource
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UtilitrSource">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ragnar.sources.utilitr.UtilitrSource.iter_docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      iter_docs
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ragnar.ingest_utilitr" class="md-nav__link">
+    <span class="md-ellipsis">
+      ingest_utilitr
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="python-library-reference">Python Library Reference<a class="headerlink" href="#python-library-reference" title="Permanent link">&para;</a></h1>
+<div class="toc">
+<ul>
+<li><a href="#python-library-reference">Python Library Reference</a><ul>
+<li><a href="#ragnar.chunking">chunking</a><ul>
+<li><a href="#ragnar.chunking.MarkdownChunker">MarkdownChunker</a><ul>
+<li><a href="#ragnar.chunking.MarkdownChunker.chunk">chunk</a></li>
+<li><a href="#ragnar.chunking.MarkdownChunker.parse_units">parse_units</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#ragnar.embeddings.remote">remote</a><ul>
+<li><a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder">RemoteOpenAIEncoder</a><ul>
+<li><a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder.dim">dim</a></li>
+<li><a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder.encode">encode</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#ragnar.vectorstores.qdrant_store">qdrant_store</a><ul>
+<li><a href="#ragnar.vectorstores.qdrant_store.ensure_collection_dense">ensure_collection_dense</a></li>
+<li><a href="#ragnar.vectorstores.qdrant_store.search_dense">search_dense</a></li>
+<li><a href="#ragnar.vectorstores.qdrant_store.upsert_dense">upsert_dense</a></li>
+</ul>
+</li>
+<li><a href="#ragnar.sources.utilitr">utilitr</a><ul>
+<li><a href="#ragnar.sources.utilitr.UtilitrSource">UtilitrSource</a><ul>
+<li><a href="#ragnar.sources.utilitr.UtilitrSource.iter_docs">iter_docs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#ragnar.ingest_utilitr">ingest_utilitr</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="ragnar.chunking" class="doc doc-heading">
+            <code>ragnar.chunking</code>
+
+
+<a href="#ragnar.chunking" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="ragnar.chunking.MarkdownChunker" class="doc doc-heading">
+            <code>MarkdownChunker</code>
+
+
+<a href="#ragnar.chunking.MarkdownChunker" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>Chunk Markdown into model-friendly pieces while preserving code fences.</p>
+<p>Chunks are assembled from paragraph and fenced-code units with a soft target
+size and a hard ceiling. Code fences are never split.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>target_tokens</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Soft target size for a chunk (tokens).</p>
+              </div>
+            </td>
+            <td>
+                  <code>800</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>overlap_tokens</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Max paragraph-only overlap between consecutive chunks.</p>
+              </div>
+            </td>
+            <td>
+                  <code>120</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_tokens</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Hard ceiling for a chunk size (tokens).</p>
+              </div>
+            </td>
+            <td>
+                  <code>1200</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="ragnar.chunking.MarkdownChunker.chunk" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">chunk</span><span class="p">(</span><span class="n">units</span><span class="p">)</span></code>
+
+<a href="#ragnar.chunking.MarkdownChunker.chunk" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pack units into chunks with soft/hard token budgets and paragraph-only overlap.</p>
+<p>Chunks are built greedily from <code>Unit</code>s (paragraphs and code fences). We never
+split inside a unit, so code fences remain intact. When starting a new chunk,
+we optionally prepend the last paragraph from the previous chunk (if it fits
+the <code>overlap_tokens</code> budget) to preserve continuity. Code is never overlapped.</p>
+<p>Cutting rules:</p>
+<p>1) If adding a unit would exceed <code>max_tokens</code>: close current chunk.
+2) If already &gt;= <code>target_tokens</code> and next unit is a paragraph: close chunk (soft cut).
+3) Otherwise, keep appending.</p>
+<p>The chunk's <code>heading_path</code> is taken from the last unit it contains.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>units</code>
+            </td>
+            <td>
+                  <code><span title="typing.List">List</span>[<span title="ragnar.chunking.Unit">Unit</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Units from <code>parse_units()</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.List">List</span>[<span title="tuple">tuple</span>[<span title="str">str</span>, <span title="typing.List">List</span>[<span title="tuple">tuple</span>[<span title="int">int</span>, <span title="str">str</span>]]]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of <code>(chunk_text, heading_path)</code> pairs in order.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="ragnar.chunking.MarkdownChunker.parse_units" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">parse_units</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></code>
+
+<a href="#ragnar.chunking.MarkdownChunker.parse_units" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Parse Markdown into atomic units (paragraphs and fenced code).</p>
+<p>The parser walks the Markdown-It token stream, producing <code>Unit</code> objects:</p>
+<ul>
+<li><code>kind="para"</code> for paragraphs and for flattened blocks (lists, blockquotes, tables).</li>
+<li><code>kind="code"</code> for fenced code blocks; fences are kept whole and never split.</li>
+</ul>
+<p>Each unit carries a <code>heading_path</code> (list of <code>(level, title)</code> tuples) reflecting the
+active H1/H2/... when the unit was encountered.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>text</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Raw Markdown source.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.List">List</span>[<span title="ragnar.chunking.Unit">Unit</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of <code>Unit</code> objects in document order.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="notes" open>
+  <summary>Notes</summary>
+  <ul>
+<li>Lists and tables are flattened by concatenating their inline text.</li>
+<li>Code fences are reconstructed as Markdown (triple backticks), and <code>lang</code>
+is taken from the fence info string.</li>
+</ul>
+</details>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="ragnar.embeddings.remote" class="doc doc-heading">
+            <code>ragnar.embeddings.remote</code>
+
+
+<a href="#ragnar.embeddings.remote" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="ragnar.embeddings.remote.RemoteOpenAIEncoder" class="doc doc-heading">
+            <code>RemoteOpenAIEncoder</code>
+
+
+<a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>Minimal client for OpenAI-compatible <code>/v1/embeddings</code>.</p>
+<p>Sends batched POST requests to <code>{api_base}/embeddings</code>, returns a
+NumPy array of L2-normalized embeddings suitable for cosine search
+in vector databases (e.g., Qdrant).</p>
+<p>Normalization ensures dot product ≡ cosine similarity.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>api_base</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Base URL of the OpenAI-compatible API
+(e.g., "https://api.openai.com/v1").</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>model</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Embedding model identifier understood by the server
+(e.g., "BAAI/bge-multilingual-gemma2").</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>api_key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional bearer token ("Authorization: Bearer ...").</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>timeout</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-request timeout in seconds.</p>
+              </div>
+            </td>
+            <td>
+                  <code>60.0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ca_bundle</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to a custom CA bundle (PEM) for TLS verification.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>insecure</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, disables TLS verification (use only for local testing).</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="note" open>
+  <summary>Note</summary>
+  <p>Uses a persistent :class:<code>requests.Session</code> for connection pooling.</p>
+</details>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="ragnar.embeddings.remote.RemoteOpenAIEncoder.dim" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">dim</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder.dim" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the embedding dimensionality (D), probing once if unknown.</p>
+<p>On first access, performs a minimal embedding request
+(:meth:<code>encode</code> on a single short string) to discover D and caches it.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The embedding dimensionality as an integer.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the embeddings API returns a non-200 response
+during the probe request.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+    </div>
+
+</div>
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="ragnar.embeddings.remote.RemoteOpenAIEncoder.encode" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">encode</span><span class="p">(</span><span class="n">texts</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span></code>
+
+<a href="#ragnar.embeddings.remote.RemoteOpenAIEncoder.encode" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Embed a list of strings and return L2-normalized vectors.</p>
+<p>Batches the input to reduce request size, performs POST requests to
+<code>/embeddings</code>, collects the <code>embedding</code> fields, converts to float32,
+and normalizes each vector to unit length.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>texts</code>
+            </td>
+            <td>
+                  <code><span title="typing.List">List</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of input strings to embed (order preserved).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>batch_size</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of texts per request batch.</p>
+              </div>
+            </td>
+            <td>
+                  <code>64</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A NumPy array of shape <code>(len(texts), D)</code> with dtype <code>float32</code>,</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>where each row is L2-normalized.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the embeddings API returns a non-200 response.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="notes" open>
+  <summary>Notes</summary>
+  <ul>
+<li>The server must return a JSON object with a <code>data</code> list of
+  <code>{ "embedding": [...] }</code> items, one per input string.</li>
+<li>Normalization uses a small epsilon (1e-12) to avoid division by zero.</li>
+</ul>
+</details>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="ragnar.vectorstores.qdrant_store" class="doc doc-heading">
+            <code>ragnar.vectorstores.qdrant_store</code>
+
+
+<a href="#ragnar.vectorstores.qdrant_store" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ragnar.vectorstores.qdrant_store.ensure_collection_dense" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">ensure_collection_dense</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+<a href="#ragnar.vectorstores.qdrant_store.ensure_collection_dense" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Ensure a dense-vector collection exists with cosine distance.</p>
+<p>Creates (or optionally recreates) a collection configured for a single
+unnamed vector of size <code>dim</code> using cosine distance—appropriate for
+L2-normalized embeddings.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>client</code>
+            </td>
+            <td>
+                  <code><span title="qdrant_client.QdrantClient">QdrantClient</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Initialized Qdrant client.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Collection name.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dim</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Embedding dimensionality (D).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>drop</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True and the collection exists, delete it before creating.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="notes" open>
+  <summary>Notes</summary>
+  <ul>
+<li>If the collection already exists and <code>drop=False</code>, this function
+  leaves it as-is (no schema validation).</li>
+<li>Cosine distance is recommended when you L2-normalize vectors
+  (dot product becomes equivalent to cosine similarity).</li>
+</ul>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ragnar.vectorstores.qdrant_store.search_dense" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">search_dense</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">collection</span><span class="p">,</span> <span class="n">query_vec</span><span class="p">,</span> <span class="n">top_k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#ragnar.vectorstores.qdrant_store.search_dense" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Search nearest chunks by vector, optionally filtering by source. For testing.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>client</code>
+            </td>
+            <td>
+                  <code><span title="qdrant_client.QdrantClient">QdrantClient</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Qdrant client.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>collection</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Collection name.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>query_vec</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Query embedding as a list (or 1D array) of floats.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>top_k</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum number of results to return.</p>
+              </div>
+            </td>
+            <td>
+                  <code>5</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional payload filter on <code>payload['source']</code> (e.g., "utilitr").</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of Qdrant <code>ScoredPoint</code> objects with <code>.score</code> and <code>.payload</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <blockquote>
+<blockquote>
+<blockquote>
+<p>hits = search_dense(client, "utilitr_v1", qvec, top_k=5, source="utilitr")
+urls = [h.payload.get("url") for h in hits]</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ragnar.vectorstores.qdrant_store.upsert_dense" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">upsert_dense</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">collection</span><span class="p">,</span> <span class="n">chunks</span><span class="p">,</span> <span class="n">vectors</span><span class="p">,</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></code>
+
+<a href="#ragnar.vectorstores.qdrant_store.upsert_dense" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Upsert points (vector + payload) for the given chunks.</p>
+<p>Each chunk is stored as a single point with:</p>
+<ul>
+<li><code>id</code>: chunk.id (must be an unsigned integer or a UUID string)</li>
+<li><code>vector</code>: vectors[j] (list of floats)</li>
+<li><code>payload</code>: chunk.metadata plus the raw <code>text</code> (for RAG)</li>
+</ul>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>client</code>
+            </td>
+            <td>
+                  <code><span title="qdrant_client.QdrantClient">QdrantClient</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Qdrant client.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>collection</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Target collection name.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>chunks</code>
+            </td>
+            <td>
+                  <code><span title="typing.List">List</span>[<span title="ragnar.chunking.Chunk">Chunk</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Chunks to write. The order must match <code>vectors</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>vectors</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>2D NumPy array of shape (N, D), one row per chunk.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>start_index</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Reserved for future use (e.g., paging); currently unused.</p>
+              </div>
+            </td>
+            <td>
+                  <code>0</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the number of chunks and vectors differs.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="qdrant_client.http.exceptions.UnexpectedResponse">UnexpectedResponse</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If Qdrant rejects the upsert.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="notes" open>
+  <summary>Notes</summary>
+  <ul>
+<li>Qdrant point IDs must be either an unsigned integer or a UUID string.
+  Ensure your <code>Chunk.id</code> respects that (we recommend UUIDs).</li>
+<li>The raw chunk text is stored in payload as <code>"text"</code>, enabling direct
+  answer assembly or debugging without an extra store.</li>
+</ul>
+</details>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="ragnar.sources.utilitr" class="doc doc-heading">
+            <code>ragnar.sources.utilitr</code>
+
+
+<a href="#ragnar.sources.utilitr" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="ragnar.sources.utilitr.UtilitrSource" class="doc doc-heading">
+            <code>UtilitrSource</code>
+
+
+<a href="#ragnar.sources.utilitr.UtilitrSource" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>Iterate over utilitR Markdown/Quarto documents with rich metadata.</p>
+<p>This adapter expects a local clone of the utilitR repository. It discovers
+<code>*.md</code> and <code>*.qmd</code> files (excluding build/system directories), splits away
+YAML frontmatter, infers a document title when missing, and constructs
+stable URLs for both the public book (<code>source_url</code>) and GitHub (<code>repo_url</code>)
+pinned to the current commit.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>repo_path</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to the local utilitR repository clone.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>base_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Base URL of the published Quarto book (used to build
+<code>source_url</code> for each document). A trailing slash is ensured.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;https://book.utilitr.org/&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="ragnar.sources.utilitr.UtilitrSource.repo_path">repo_path</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Normalized repository path.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ragnar.sources.utilitr.UtilitrSource.base_url">base_url</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Normalized base URL (with trailing slash).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ragnar.sources.utilitr.UtilitrSource.commit">commit</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Current git commit hash of the repository (or None if unknown).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="note" open>
+  <summary>Note</summary>
+  <p>The iterator yields <code>DocRecord(text, metadata)</code> for each discovered file.
+Downstream, the chunker will split <code>text</code> into atomic units while
+preserving <code>metadata</code> for citations.</p>
+</details>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="ragnar.sources.utilitr.UtilitrSource.iter_docs" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">iter_docs</span><span class="p">()</span></code>
+
+<a href="#ragnar.sources.utilitr.UtilitrSource.iter_docs" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Yield <code>DocRecord</code> items for each relevant Markdown/Quarto file.</p>
+<p>Discovery rules:</p>
+<ul>
+<li>Include: all <code>**/*.md</code>, <code>**/*.qmd</code>.</li>
+<li>Exclude directories: {".git", "_book", "docs", ".quarto", "renv", ".github"}.</li>
+</ul>
+<p>For each file:</p>
+<ol>
+<li>Read raw text and split YAML frontmatter (via <code>extract_frontmatter</code>).</li>
+<li>Determine title:<ul>
+<li>from frontmatter <code>title</code>, or</li>
+<li>from the first Markdown <code># Heading</code>, or</li>
+<li>fallback to the filename stem.</li>
+</ul>
+</li>
+<li>Compute URLs:<ul>
+<li><code>source_url</code> → <code>{base_url}/{relative}.html</code></li>
+<li><code>repo_url</code>   → GitHub blob URL pinned to <code>{commit}</code> (or "main").</li>
+</ul>
+</li>
+</ol>
+
+
+    <p><span class="doc-section-title">Yields:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>DocRecord</code></td>            <td>
+                  <code><span title="typing.Iterable">Iterable</span>[<span title="ragnar.sources.utilitr.DocRecord">DocRecord</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>text</code>=Markdown body (no frontmatter), <code>metadata</code> with keys</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+<td></td>            <td>
+                  <code><span title="typing.Iterable">Iterable</span>[<span title="ragnar.sources.utilitr.DocRecord">DocRecord</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>described in the class docstring.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+        <p>Example:</p>
+<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; src = UtilitrSource(Path(&quot;../utilitR&quot;))
+&gt;&gt;&gt; doc = next(iter(src.iter_docs()))
+&gt;&gt;&gt; (&quot;doc_title&quot; in doc.metadata, doc.metadata[&quot;source&quot;])
+(True, &quot;utilitr&quot;)
+</code></pre></div>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="ragnar.ingest_utilitr" class="doc doc-heading">
+            <code>ragnar.ingest_utilitr</code>
+
+
+<a href="#ragnar.ingest_utilitr" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>RAGnaR — utilitR ingestion CLI.</p>
+<p>This script builds a dense retrieval index from the utilitR repository:
+1) loads Markdown/Quarto docs (frontmatter removed) with rich metadata,
+2) chunks them into model-friendly pieces (paragraphs + fenced code),
+3) embeds chunks via a remote OpenAI-compatible /v1/embeddings endpoint,
+4) upserts vectors + payloads into a Qdrant collection.</p>
+
+
+<details class="typical-use" open>
+  <summary>Typical use</summary>
+  <p>ragnar-ingest         --repo-path ../utilitR         --collection utilitr_v1         --qdrant-url http://localhost:6333         --embed-api-base https://api.openai.com/v1         --embed-model BAAI/bge-multilingual-gemma2         --drop-collection</p>
+</details>        <p>Environment:
+- EMBED_API_BASE / EMBED_API_KEY / EMBED_MODEL (optional CLI overrides)
+- QDRANT_URL / QDRANT_API_KEY (optional CLI overrides)</p>
+<p>Outputs:
+- A Qdrant collection with one point per chunk (cosine distance),
+  payload includes: source, chapter/section, breadcrumbs, urls, token_count, text.
+- Console stats (docs, chunks, token distribution, throughput).</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+    
+  </body>
+</html>

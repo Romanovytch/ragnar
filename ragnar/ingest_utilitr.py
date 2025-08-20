@@ -1,3 +1,30 @@
+"""
+RAGnaR — utilitR ingestion CLI.
+
+This script builds a dense retrieval index from the utilitR repository:
+1) loads Markdown/Quarto docs (frontmatter removed) with rich metadata,
+2) chunks them into model-friendly pieces (paragraphs + fenced code),
+3) embeds chunks via a remote OpenAI-compatible /v1/embeddings endpoint,
+4) upserts vectors + payloads into a Qdrant collection.
+
+Typical use:
+    ragnar-ingest \
+        --repo-path ../utilitR \
+        --collection utilitr_v1 \
+        --qdrant-url http://localhost:6333 \
+        --embed-api-base https://api.openai.com/v1 \
+        --embed-model BAAI/bge-multilingual-gemma2 \
+        --drop-collection
+
+Environment:
+- EMBED_API_BASE / EMBED_API_KEY / EMBED_MODEL (optional CLI overrides)
+- QDRANT_URL / QDRANT_API_KEY (optional CLI overrides)
+
+Outputs:
+- A Qdrant collection with one point per chunk (cosine distance),
+  payload includes: source, chapter/section, breadcrumbs, urls, token_count, text.
+- Console stats (docs, chunks, token distribution, throughput).
+"""
 from __future__ import annotations
 import os
 import argparse

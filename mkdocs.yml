@@ -1,0 +1,42 @@
+site_name: RAGnaR - Technical documentation
+theme:
+  name: material
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: false
+  - i18n:
+      languages:
+        - locale: en
+          name: English
+          default: true
+          build: true
+        - locale: fr
+          name: Français
+          build: true
+          nav_translations:
+            Home: Accueil
+            Getting started: Bien démarrer
+            Reference: Référence
+            CLI: CLI
+            Python library: Bibliothèque Python
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite 
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Reference:
+      - CLI: reference/cli.md
+      - Python library: reference/python.md

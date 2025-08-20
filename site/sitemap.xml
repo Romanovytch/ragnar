@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+    <url>
+        <loc>None./</loc>
+        <lastmod>2025-08-20</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="None"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="Nonefr/"/>
+    </url>
+    <url>
+        <loc>Nonegetting-started/</loc>
+        <lastmod>2025-08-20</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonegetting-started/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="Nonefr/getting-started/"/>
+    </url>
+    <url>
+        <loc>Nonereference/cli/</loc>
+        <lastmod>2025-08-20</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonereference/cli/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="Nonefr/reference/cli/"/>
+    </url>
+    <url>
+        <loc>Nonereference/python/</loc>
+        <lastmod>2025-08-20</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonereference/python/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="Nonefr/reference/python/"/>
+    </url>
+    <url>
+        <loc>Nonefr/</loc>
+        <lastmod>2025-08-20</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="fr" href="Nonefr/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="None"/>
+    </url>
+    <url>
+        <loc>Nonefr/getting-started/</loc>
+        <lastmod>2025-08-20</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="fr" href="Nonefr/getting-started/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonegetting-started/"/>
+    </url>
+    <url>
+        <loc>Nonefr/reference/cli/</loc>
+        <lastmod>2025-08-20</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="fr" href="Nonefr/reference/cli/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonereference/cli/"/>
+    </url>
+    <url>
+        <loc>Nonefr/reference/python/</loc>
+        <lastmod>2025-08-20</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="fr" href="Nonefr/reference/python/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonereference/python/"/>
+    </url>
+</urlset>
