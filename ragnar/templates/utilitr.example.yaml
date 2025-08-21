@@ -1,0 +1,7 @@
+utilitr:
+    kind: markdown_repo
+    repo_path: "../utilitR"
+    base_url: "https://book.utilitr.org/"
+    repo_url_template: "https://github.com/InseeFrLab/utilitR/blob/{commit}/{path}"
+    default_lang: "fr"
+    exclude_dirs: [".git", "_book", "docs", ".quarto", "renv", ".github"]
