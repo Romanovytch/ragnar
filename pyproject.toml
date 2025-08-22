@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ragnar-ingest = "ragnar.ingest_utilitr:main"
+ragnar-ingest = "ragnar.cli.ingest:main"
 ragnar-config = "ragnar.cli.config:main"
 
 [project.optional-dependencies]
