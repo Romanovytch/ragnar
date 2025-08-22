@@ -1,0 +1,16 @@
+version: 1
+
+defaults:
+  include_globs: ["**/*.md", "**/*.qmd", "**/*.Rmd"]
+  exclude_dirs: [".git", "_book", "docs", ".quarto", "renv", ".github", "node_modules", "build", "dist", "site"]
+  default_lang: "en"
+  follow_symlinks: false
+
+sources:
+  handbook-example:
+    kind: markdown_repo
+    repo_path: "../handbook"
+    base_url: "https://docs.example.org/"
+    repo_url_template: "https://github.com/ExampleOrg/handbook/blob/{commit}/{path}"
+    include_globs: ["**/*.md"]
+    default_lang: "en"
