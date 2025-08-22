@@ -17,6 +17,7 @@ venv/
 .env
 .mypy_cache/
 .pytest_cache/
+sources.yaml
 
 # IDEs
 .vscode/
