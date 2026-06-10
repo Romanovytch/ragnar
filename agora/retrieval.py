@@ -49,13 +49,14 @@ def main():
     client = QdrantClient(url=args.qdrant_url, api_key=args.qdrant_api_key or None)
     flt = Filter(must=[FieldCondition(key="source", match=MatchValue(value="utilitr"))])
 
-    hits = client.search(
+    response = client.query_points(
         collection_name=args.collection,
-        query_vector=vec,
+        query=vec,
         query_filter=flt,
         limit=args.top_k,
         with_payload=True,
     )
+    hits = response.points
 
     print(f"\nQuery: {query}\nTop {len(hits)} results:\n")
     for i, h in enumerate(hits, 1):

@@ -6,7 +6,7 @@ description = "RAG ingestion CLI for CanaR"
 readme = "README.md"
 
 dependencies = [
-  "qdrant-client>=1.9.0",
+  "qdrant-client>=1.10.0",
   "markdown-it-py>=3.0.0",
   "PyYAML>=6.0.1",
   "numpy>=1.26.0",

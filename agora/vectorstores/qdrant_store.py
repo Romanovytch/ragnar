@@ -108,12 +108,12 @@ def search_dense(
     flt = None
     if source:
         flt = Filter(must=[FieldCondition(key="source", match=MatchValue(value=source))])
-    hits = client.search(
+    response = client.query_points(
         collection_name=collection,
-        query_vector=query_vec,
+        query=query_vec,
         limit=top_k,
         with_payload=True,
         with_vectors=False,
         query_filter=flt,
     )
-    return hits
+    return response.points
