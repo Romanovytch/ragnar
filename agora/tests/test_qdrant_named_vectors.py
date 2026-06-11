@@ -15,6 +15,7 @@ from agora.sources.models.base import (
 from agora.vectorstores.qdrant_store import (
     build_named_points,
     ensure_collection,
+    upsert_named,
     validate_named_vectors,
 )
 
@@ -130,3 +131,30 @@ def test_ensure_collection_configures_bm25_sparse_idf_modifier():
 
     sparse_config = client.kwargs["sparse_vectors_config"]["sparse"]
     assert sparse_config.modifier == Modifier.IDF
+
+
+def test_upsert_named_uses_batched_upload_points():
+    class FakeClient:
+        kwargs = None
+
+        def upload_points(self, **kwargs):
+            self.kwargs = kwargs
+
+    client = FakeClient()
+    chunks = _chunks()
+    config = VectorIndexConfig(vectors=[DenseVectorConfig(name="dense", size=2)])
+    vectors = {"dense": np.array([[1.0, 2.0], [3.0, 4.0]], dtype="float32")}
+
+    upsert_named(
+        client,
+        "kb",
+        chunks,
+        config,
+        vectors,
+        {"dense": 2},
+        batch_size=3,
+    )
+
+    assert client.kwargs["collection_name"] == "kb"
+    assert client.kwargs["batch_size"] == 3
+    assert len(client.kwargs["points"]) == 2

@@ -36,6 +36,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--qdrant-api-key", help="Qdrant API key (optional)")
     p.add_argument("--drop-collection", action="store_true", help="Drop & recreate the collection")
     p.add_argument("--batch-size", type=int, default=64, help="Embedding batch size")
+    p.add_argument(
+        "--qdrant-batch-size",
+        type=int,
+        default=16,
+        help="Qdrant point upload batch size",
+    )
     p.add_argument("--dotenv-path", help="Path to a .env file to load before resolving env vars")
 
     # Embeddings (remote OpenAI-compatible)
@@ -234,6 +240,7 @@ def main(argv: list[str] | None = None) -> None:
         ingestion_config.vector_index,
         named_vectors,
         dimensions,
+        batch_size=args.qdrant_batch_size,
     )
 
     print(f"[ok] Ingested {len(chunks)} chunks into '{args.collection}' (source={src_name})")

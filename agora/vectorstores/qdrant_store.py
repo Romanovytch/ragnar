@@ -187,10 +187,11 @@ def upsert_named(
     vector_index: VectorIndexConfig,
     named_vectors: NamedVectorBatch,
     dimensions: dict[str, int],
+    batch_size: int = 16,
 ):
     """Upsert named-vector points for the given chunks."""
     points = build_named_points(chunks, vector_index, named_vectors, dimensions)
-    client.upsert(collection_name=collection, points=points)
+    client.upload_points(collection_name=collection, points=points, batch_size=batch_size)
 
 
 def upsert_dense(
@@ -210,6 +211,7 @@ def upsert_dense(
         VectorIndexConfig(vectors=[DenseVectorConfig(name="dense", size=dimensions["dense"])]),
         {"dense": vectors},
         dimensions,
+        batch_size=len(chunks) or 1,
     )
 
 
