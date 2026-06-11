@@ -7,10 +7,11 @@ import numpy as np
 
 from agora.embeddings.named import (
     ConfiguredNamedVectorEncoder,
+    FastEmbedLateInteractionEncoder,
     FastEmbedSparseEncoder,
     normalize_fastembed_language,
 )
-from agora.sources.models.base import SparseVectorConfig, VectorIndexConfig
+from agora.sources.models.base import MultiVectorConfig, SparseVectorConfig, VectorIndexConfig
 
 
 class _FakeSparseEmbedding:
@@ -30,6 +31,25 @@ class _FakeSparseTextEmbedding:
         assert batch_size == 7
         yield _FakeSparseEmbedding([3, 1], [0.25, 1.5])
         yield _FakeSparseEmbedding([4], [2.0])
+
+
+class _FakeLateInteractionTextEmbedding:
+    init_kwargs = None
+    embed_called = False
+
+    def __init__(self, **kwargs):
+        type(self).init_kwargs = kwargs
+        self.embedding_size = 3
+
+    def embed(self, texts, batch_size=64):
+        type(self).embed_called = True
+        raise AssertionError("late-interaction indexing must use passage_embed")
+
+    def passage_embed(self, texts, batch_size=64):
+        assert list(texts) == ["alpha beta", "gamma"]
+        assert batch_size == 7
+        yield np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float32)
+        yield np.array([[7.0, 8.0, 9.0]], dtype=np.float32)
 
 
 def test_fastembed_sparse_encoder_converts_embeddings(monkeypatch):
@@ -52,6 +72,29 @@ def test_fastembed_sparse_encoder_converts_embeddings(monkeypatch):
     assert vectors[0].values == [0.25, 1.5]
     assert vectors[1].indices == [4]
     assert vectors[1].values == [2.0]
+
+
+def test_fastembed_late_interaction_encoder_converts_passage_embeddings(monkeypatch):
+    _FakeLateInteractionTextEmbedding.embed_called = False
+    fake_fastembed = types.SimpleNamespace(
+        LateInteractionTextEmbedding=_FakeLateInteractionTextEmbedding
+    )
+    monkeypatch.setitem(sys.modules, "fastembed", fake_fastembed)
+
+    encoder = FastEmbedLateInteractionEncoder(
+        model_name="answerdotai/answerai-colbert-small-v1"
+    )
+    vectors = encoder.encode(["alpha beta", "gamma"], batch_size=7)
+
+    assert _FakeLateInteractionTextEmbedding.init_kwargs == {
+        "model_name": "answerdotai/answerai-colbert-small-v1"
+    }
+    assert _FakeLateInteractionTextEmbedding.embed_called is False
+    assert encoder.dim == 3
+    assert vectors == [
+        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+        [[7.0, 8.0, 9.0]],
+    ]
 
 
 def test_configured_encoder_uses_source_default_lang_for_sparse(monkeypatch):
@@ -82,6 +125,30 @@ def test_sparse_vector_language_overrides_source_default_lang(monkeypatch):
     )
 
     assert _FakeSparseTextEmbedding.init_kwargs["language"] == "spanish"
+
+
+def test_configured_encoder_uses_fastembed_late_interaction_for_multi(monkeypatch):
+    _FakeLateInteractionTextEmbedding.embed_called = False
+    fake_fastembed = types.SimpleNamespace(
+        LateInteractionTextEmbedding=_FakeLateInteractionTextEmbedding
+    )
+    monkeypatch.setitem(sys.modules, "fastembed", fake_fastembed)
+
+    encoder = ConfiguredNamedVectorEncoder(
+        config=VectorIndexConfig(vectors=[MultiVectorConfig(name="multi")]),
+        api_base="http://emb/v1",
+        model="dense-model",
+    )
+    outputs = encoder.encode(["alpha beta", "gamma"], batch_size=7)
+
+    assert encoder.resolved_dimensions() == {"multi": 3}
+    assert _FakeLateInteractionTextEmbedding.init_kwargs == {
+        "model_name": "answerdotai/answerai-colbert-small-v1"
+    }
+    assert outputs["multi"] == [
+        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+        [[7.0, 8.0, 9.0]],
+    ]
 
 
 def test_normalize_fastembed_language_handles_source_lang_codes():

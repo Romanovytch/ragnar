@@ -32,7 +32,7 @@ agora/
 4. `MarkdownRepoSource.iter_docs()` discovers files, strips frontmatter, infers title/lang, and emits `DocRecord` metadata. (agora/sources/markdown_source.py ~L119-L239, agora/util.py ~L48-L61)
 5. `MarkdownChunker.parse_units()` parses headings/paragraphs/code fences, and `MarkdownChunker.chunk()` builds token-budgeted chunks with paragraph-only overlap. (agora/chunking.py ~L45-L267)
 6. For each chunk, `agora-ingest` computes headings, token counts, URLs, and a deterministic UUID chunk id. (agora/cli/ingest.py ~L171-L200, agora/util.py ~L29-L78)
-7. `ConfiguredNamedVectorEncoder.encode()` builds the configured named vector outputs. Dense and multi-vector modes use OpenAI-compatible embedding endpoints, and sparse mode uses FastEmbed sparse text models such as `Qdrant/bm25`; BM25 language defaults to the selected source `default_lang`. (agora/cli/ingest.py, agora/embeddings/remote.py, agora/embeddings/named.py)
+7. `ConfiguredNamedVectorEncoder.encode()` builds the configured named vector outputs. Dense mode uses the OpenAI-compatible embedding endpoint, sparse mode uses FastEmbed sparse text models such as `Qdrant/bm25`, and multi-vector mode uses FastEmbed late-interaction models such as `answerdotai/answerai-colbert-small-v1`. BM25 language defaults to the selected source `default_lang`. (agora/cli/ingest.py, agora/embeddings/remote.py, agora/embeddings/named.py)
 8. Qdrant connectivity is preflighted, a named-vector collection is ensured, vector outputs are validated against the configured schema, and all points are upserted. (agora/cli/ingest.py, agora/vectorstores/qdrant_store.py)
 
 ## Source loading
@@ -82,8 +82,8 @@ agora/
 
 | Aspect | Detail | Source |
 |---|---|---|
-| Provider & model | Dense and multi-vector modes use the remote OpenAI-compatible embeddings endpoint; sparse mode uses FastEmbed sparse text models | (agora/cli/ingest.py, agora/embeddings/remote.py, agora/embeddings/named.py) |
-| Embedding dimension | Dense and multi-vector dimensions are probed lazily from the embeddings API unless fixed in `vector_index` | (agora/embeddings/remote.py, agora/embeddings/named.py) |
+| Provider & model | Dense mode uses the remote OpenAI-compatible embeddings endpoint; sparse and multi-vector modes use FastEmbed | (agora/cli/ingest.py, agora/embeddings/remote.py, agora/embeddings/named.py) |
+| Embedding dimension | Dense dimensions are probed from the embeddings API; multi-vector dimensions are read from the FastEmbed late-interaction model unless fixed in `vector_index` | (agora/embeddings/remote.py, agora/embeddings/named.py) |
 | Batch size | CLI `--batch-size` (default 64) controls embedding batches | (agora/cli/ingest.py ~L38-L39, ~L213-L215) |
 | Rate-limit / retry handling | No retry/backoff; non-200 responses raise `RuntimeError` | (agora/embeddings/remote.py ~L95-L103) |
 | Local fallback | [not found in code] |  |
@@ -161,7 +161,7 @@ vector_index:
       model: Qdrant/bm25
     - name: multi
       kind: multi
-      size: 128
+      model: answerdotai/answerai-colbert-small-v1
 ```
 
 ## External dependencies
@@ -169,7 +169,7 @@ vector_index:
 | Dependency | Version | Role | Configured via |
 |---|---|---|---|
 | qdrant-client | >=1.10.0 | Qdrant client + upsert | QDRANT_URL/QDRANT_API_KEY (agora/cli/ingest.py ~L151-L154) |
-| fastembed | >=0.8.0 | Sparse text embeddings, including `Qdrant/bm25` | `vector_index` sparse config |
+| fastembed | >=0.8.0 | Sparse text embeddings and late-interaction multivectors | `vector_index` sparse/multi config |
 | markdown-it-py | >=3.0.0 | Markdown parsing for chunking | `MarkdownChunker` (agora/chunking.py ~L5-L67) |
 | tiktoken | >=0.7.0 | Token counting for chunk budgets | `count_tokens` (agora/util.py ~L12-L33) |
 | requests | >=2.31.0 | Remote embeddings HTTP calls | `RemoteOpenAIEncoder` (agora/embeddings/remote.py) |
@@ -192,7 +192,7 @@ vector_index:
 
 - Chunk IDs are deterministic UUIDv5 values derived from file path, chunk index, and commit, enabling stable point IDs across runs for the same document state. (agora/util.py ~L74-L78, agora/cli/ingest.py ~L194-L200)
 - Code fences are never split, and overlap is paragraph-only to preserve code integrity while retaining context between chunks. (agora/chunking.py ~L29-L33, ~L161-L207)
-- Dense and multi-vector embeddings are L2-normalized and stored in cosine-distance named vector slots, aligning the distance metric with the encoder output. Sparse vectors are stored in Qdrant sparse vector slots on the same chunk point; `Qdrant/bm25` sparse slots use Qdrant's `idf` sparse modifier and inherit BM25 language from the source `default_lang` unless explicitly overridden. (agora/embeddings/remote.py, agora/embeddings/named.py, agora/vectorstores/qdrant_store.py)
+- Dense embeddings are L2-normalized and stored in cosine-distance named vector slots, aligning the distance metric with the encoder output. Multi-vector embeddings are real FastEmbed late-interaction token matrices stored with Qdrant `MAX_SIM`. Sparse vectors are stored in Qdrant sparse vector slots on the same chunk point; `Qdrant/bm25` sparse slots use Qdrant's `idf` sparse modifier and inherit BM25 language from the source `default_lang` unless explicitly overridden. (agora/embeddings/remote.py, agora/embeddings/named.py, agora/vectorstores/qdrant_store.py)
 - Ingestion validates configured vector names, dimensions, sparse vector shape, and chunk counts before Qdrant upsert so schema drift fails before partial writes. (agora/vectorstores/qdrant_store.py)
 
 ## Open questions & gaps

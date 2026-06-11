@@ -26,10 +26,11 @@ class SparseVectorConfig(BaseModel):
 class MultiVectorConfig(BaseModel):
     name: str = "multi"
     kind: Literal["multi"] = "multi"
+    provider: Literal["fastembed"] = "fastembed"
+    model: str = "answerdotai/answerai-colbert-small-v1"
     size: int | None = None
     distance: Literal["cosine"] = "cosine"
     comparator: Literal["max_sim"] = "max_sim"
-    model: str | None = None
 
 
 VectorModeConfig = Annotated[

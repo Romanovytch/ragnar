@@ -14,6 +14,10 @@ vector_index:
     # - name: sparse
     #   kind: sparse
     #   model: Qdrant/bm25
+    # Optional late-interaction multivector:
+    # - name: multi
+    #   kind: multi
+    #   model: answerdotai/answerai-colbert-small-v1
 
 sources:
   utilitr:

@@ -103,6 +103,41 @@ class FastEmbedSparseEncoder:
         return vectors
 
 
+class FastEmbedLateInteractionEncoder:
+    """Late-interaction multivector encoder backed by FastEmbed."""
+
+    def __init__(
+        self,
+        model_name: str = "answerdotai/answerai-colbert-small-v1",
+    ) -> None:
+        try:
+            from fastembed import LateInteractionTextEmbedding
+        except ImportError as e:
+            raise RuntimeError(
+                "Multi-vector mode requires FastEmbed. Install dependencies with "
+                "`pip install -e .` or `pip install fastembed`."
+            ) from e
+
+        try:
+            self._model = LateInteractionTextEmbedding(model_name=model_name)
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not initialize FastEmbed late-interaction model '{model_name}'. "
+                "The first run may need network access to download model files."
+            ) from e
+
+    @property
+    def dim(self) -> int:
+        return int(self._model.embedding_size)
+
+    def encode(self, texts: list[str], batch_size: int = 64) -> MultiVectorBatch:
+        vectors: MultiVectorBatch = []
+        for item in self._model.passage_embed(texts, batch_size=batch_size):
+            rows = item.tolist() if hasattr(item, "tolist") else item
+            vectors.append([[float(value) for value in row] for row in rows])
+        return vectors
+
+
 class ConfiguredNamedVectorEncoder:
     """Build named vector outputs from the configured vector index."""
 
@@ -118,10 +153,11 @@ class ConfiguredNamedVectorEncoder:
         self.config = config
         self._dense_encoders: dict[str, RemoteOpenAIEncoder] = {}
         self._sparse_encoders: dict[str, FastEmbedSparseEncoder] = {}
+        self._multi_encoders: dict[str, FastEmbedLateInteractionEncoder] = {}
         sparse_default_language = normalize_fastembed_language(default_lang)
 
         for vector in config.vectors:
-            if isinstance(vector, DenseVectorConfig | MultiVectorConfig):
+            if isinstance(vector, DenseVectorConfig):
                 self._dense_encoders[vector.name] = RemoteOpenAIEncoder(
                     api_base=api_base,
                     model=vector.model or model,
@@ -137,6 +173,10 @@ class ConfiguredNamedVectorEncoder:
                     language=sparse_language,
                     disable_stemmer=vector.disable_stemmer,
                 )
+            elif isinstance(vector, MultiVectorConfig):
+                self._multi_encoders[vector.name] = FastEmbedLateInteractionEncoder(
+                    model_name=vector.model,
+                )
 
     def resolved_dimensions(self) -> dict[str, int]:
         dims: dict[str, int] = {}
@@ -144,7 +184,10 @@ class ConfiguredNamedVectorEncoder:
             if isinstance(vector, SparseVectorConfig):
                 continue
             configured_size = vector.size
-            actual_size = self._dense_encoders[vector.name].dim
+            if isinstance(vector, DenseVectorConfig):
+                actual_size = self._dense_encoders[vector.name].dim
+            elif isinstance(vector, MultiVectorConfig):
+                actual_size = self._multi_encoders[vector.name].dim
             if configured_size is not None and configured_size != actual_size:
                 raise ValueError(
                     f"Configured vector '{vector.name}' has size {configured_size}, "
@@ -165,6 +208,7 @@ class ConfiguredNamedVectorEncoder:
                     texts, batch_size=batch_size
                 )
             elif isinstance(vector, MultiVectorConfig):
-                dense = self._dense_encoders[vector.name].encode(texts, batch_size=batch_size)
-                outputs[vector.name] = [[row.tolist()] for row in dense]
+                outputs[vector.name] = self._multi_encoders[vector.name].encode(
+                    texts, batch_size=batch_size
+                )
         return outputs
