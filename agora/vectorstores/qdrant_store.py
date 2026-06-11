@@ -7,39 +7,190 @@ from qdrant_client.http.models import (
     FieldCondition,
     Filter,
     MatchValue,
+    Modifier,
+    MultiVectorComparator,
+    MultiVectorConfig,
     PointStruct,
     ScoredPoint,
+    SparseVector,
+    SparseVectorParams,
     VectorParams,
 )
 
 from ..chunking import Chunk
+from ..embeddings.named import NamedVectorBatch, SparseVectorData
+from ..sources.models.base import (
+    DenseVectorConfig,
+    SparseVectorConfig,
+    VectorIndexConfig,
+)
+from ..sources.models.base import (
+    MultiVectorConfig as AgoraMultiVectorConfig,
+)
 
 
-def ensure_collection_dense(client: QdrantClient, name: str, dim: int, drop: bool = False):
-    """Ensure a dense-vector collection exists with cosine distance.
+def _distance(name: str) -> Distance:
+    if name == "cosine":
+        return Distance.COSINE
+    raise ValueError(f"Unsupported vector distance: {name}")
 
-    Creates (or optionally recreates) a collection configured for a single
-    unnamed vector of size `dim` using cosine distance—appropriate for
-    L2-normalized embeddings.
 
-    Args:
-        client: Initialized Qdrant client.
-        name: Collection name.
-        dim: Embedding dimensionality (D).
-        drop: If True and the collection exists, delete it before creating.
+def _sparse_modifier(name: str) -> Modifier | None:
+    if name == "idf":
+        return Modifier.IDF
+    if name == "none":
+        return None
+    raise ValueError(f"Unsupported sparse vector modifier: {name}")
 
-    Notes:
-        - If the collection already exists and `drop=False`, this function
-          leaves it as-is (no schema validation).
-        - Cosine distance is recommended when you L2-normalize vectors
-          (dot product becomes equivalent to cosine similarity).
-    """
+
+def ensure_collection(
+    client: QdrantClient,
+    name: str,
+    vector_index: VectorIndexConfig,
+    dimensions: dict[str, int],
+    drop: bool = False,
+):
+    """Ensure a Qdrant collection exists with the configured named vectors."""
     if drop and client.collection_exists(name):
         client.delete_collection(name)
     if not client.collection_exists(name):
-        client.create_collection(
-            collection_name=name, vectors_config=VectorParams(size=dim, distance=Distance.COSINE)
+        vectors_config: dict[str, VectorParams] = {}
+        sparse_vectors_config: dict[str, SparseVectorParams] = {}
+
+        for vector in vector_index.vectors:
+            if isinstance(vector, DenseVectorConfig):
+                vectors_config[vector.name] = VectorParams(
+                    size=dimensions[vector.name],
+                    distance=_distance(vector.distance),
+                )
+            elif isinstance(vector, SparseVectorConfig):
+                sparse_vectors_config[vector.name] = SparseVectorParams(
+                    modifier=_sparse_modifier(vector.modifier)
+                )
+            elif isinstance(vector, AgoraMultiVectorConfig):
+                vectors_config[vector.name] = VectorParams(
+                    size=dimensions[vector.name],
+                    distance=_distance(vector.distance),
+                    multivector_config=MultiVectorConfig(
+                        comparator=MultiVectorComparator.MAX_SIM
+                    ),
+                )
+
+        kwargs = {
+            "collection_name": name,
+            "vectors_config": vectors_config,
+        }
+        if sparse_vectors_config:
+            kwargs["sparse_vectors_config"] = sparse_vectors_config
+        client.create_collection(**kwargs)
+
+
+def ensure_collection_dense(client: QdrantClient, name: str, dim: int, drop: bool = False):
+    """Backward-compatible dense collection helper using named vector 'dense'."""
+    ensure_collection(
+        client,
+        name,
+        VectorIndexConfig(vectors=[DenseVectorConfig(name="dense", size=dim)]),
+        {"dense": dim},
+        drop=drop,
+    )
+
+
+def validate_named_vectors(
+    chunks: list[Chunk],
+    vector_index: VectorIndexConfig,
+    named_vectors: NamedVectorBatch,
+    dimensions: dict[str, int],
+) -> None:
+    configured_names = {v.name for v in vector_index.vectors}
+    returned_names = set(named_vectors)
+    if configured_names != returned_names:
+        missing = ", ".join(sorted(configured_names - returned_names)) or "none"
+        unexpected = ", ".join(sorted(returned_names - configured_names)) or "none"
+        raise ValueError(
+            f"Vector names do not match config; missing={missing}; unexpected={unexpected}"
         )
+
+    n_chunks = len(chunks)
+    for vector in vector_index.vectors:
+        values = named_vectors[vector.name]
+        if isinstance(vector, DenseVectorConfig):
+            if not isinstance(values, np.ndarray) or values.ndim != 2:
+                raise ValueError(f"Dense vector '{vector.name}' must be a 2D NumPy array")
+            if values.shape != (n_chunks, dimensions[vector.name]):
+                raise ValueError(
+                    f"Dense vector '{vector.name}' shape {values.shape} does not match "
+                    f"({n_chunks}, {dimensions[vector.name]})"
+                )
+        elif isinstance(vector, SparseVectorConfig):
+            if not isinstance(values, list) or len(values) != n_chunks:
+                raise ValueError(f"Sparse vector '{vector.name}' must contain one value per chunk")
+            for item in values:
+                if not isinstance(item, SparseVectorData):
+                    raise ValueError(f"Sparse vector '{vector.name}' has an invalid item")
+                if len(item.indices) != len(item.values):
+                    raise ValueError(
+                        f"Sparse vector '{vector.name}' indices and values lengths differ"
+                    )
+        elif isinstance(vector, AgoraMultiVectorConfig):
+            if not isinstance(values, list) or len(values) != n_chunks:
+                raise ValueError(f"Multi vector '{vector.name}' must contain one value per chunk")
+            expected_dim = dimensions[vector.name]
+            for item in values:
+                if not isinstance(item, list):
+                    raise ValueError(f"Multi vector '{vector.name}' has an invalid item")
+                for row in item:
+                    if len(row) != expected_dim:
+                        raise ValueError(
+                            f"Multi vector '{vector.name}' row dimension {len(row)} "
+                            f"does not match {expected_dim}"
+                        )
+
+
+def build_named_points(
+    chunks: list[Chunk],
+    vector_index: VectorIndexConfig,
+    named_vectors: NamedVectorBatch,
+    dimensions: dict[str, int],
+) -> list[PointStruct]:
+    validate_named_vectors(chunks, vector_index, named_vectors, dimensions)
+    points: list[PointStruct] = []
+    for j, chunk in enumerate(chunks):
+        point_vectors = {}
+        for vector in vector_index.vectors:
+            values = named_vectors[vector.name]
+            if isinstance(vector, DenseVectorConfig):
+                point_vectors[vector.name] = values[j].tolist()
+            elif isinstance(vector, SparseVectorConfig):
+                sparse = values[j]
+                point_vectors[vector.name] = SparseVector(
+                    indices=sparse.indices,
+                    values=sparse.values,
+                )
+            elif isinstance(vector, AgoraMultiVectorConfig):
+                point_vectors[vector.name] = values[j]
+
+        points.append(
+            PointStruct(
+                id=chunk.id,
+                vector=point_vectors,
+                payload=chunk.metadata | {"text": chunk.text},
+            )
+        )
+    return points
+
+
+def upsert_named(
+    client: QdrantClient,
+    collection: str,
+    chunks: list[Chunk],
+    vector_index: VectorIndexConfig,
+    named_vectors: NamedVectorBatch,
+    dimensions: dict[str, int],
+):
+    """Upsert named-vector points for the given chunks."""
+    points = build_named_points(chunks, vector_index, named_vectors, dimensions)
+    client.upsert(collection_name=collection, points=points)
 
 
 def upsert_dense(
@@ -49,37 +200,17 @@ def upsert_dense(
     vectors: np.ndarray,
     start_index: int = 0,
 ):
-    """Upsert points (vector + payload) for the given chunks.
-
-    Each chunk is stored as a single point with:
-
-      - `id`: chunk.id (must be an unsigned integer or a UUID string)
-      - `vector`: vectors[j] (list of floats)
-      - `payload`: chunk.metadata plus the raw `text` (for RAG)
-
-    Args:
-        client: Qdrant client.
-        collection: Target collection name.
-        chunks: Chunks to write. The order must match `vectors`.
-        vectors: 2D NumPy array of shape (N, D), one row per chunk.
-        start_index: Reserved for future use (e.g., paging); currently unused.
-
-    Raises:
-        ValueError: If the number of chunks and vectors differs.
-        qdrant_client.http.exceptions.UnexpectedResponse: If Qdrant rejects the upsert.
-
-    Notes:
-        - Qdrant point IDs must be either an unsigned integer or a UUID string.
-          Ensure your `Chunk.id` respects that (we recommend UUIDs).
-        - The raw chunk text is stored in payload as `"text"`, enabling direct
-          answer assembly or debugging without an extra store.
-    """
-    points = []
-    for j, c in enumerate(chunks):
-        points.append(
-            PointStruct(id=c.id, vector=vectors[j].tolist(), payload=c.metadata | {"text": c.text})
-        )
-    client.upsert(collection_name=collection, points=points)
+    """Backward-compatible dense upsert helper using named vector 'dense'."""
+    del start_index
+    dimensions = {"dense": int(vectors.shape[1]) if vectors.ndim == 2 else 0}
+    upsert_named(
+        client,
+        collection,
+        chunks,
+        VectorIndexConfig(vectors=[DenseVectorConfig(name="dense", size=dimensions["dense"])]),
+        {"dense": vectors},
+        dimensions,
+    )
 
 
 def search_dense(

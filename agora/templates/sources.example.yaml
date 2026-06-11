@@ -6,6 +6,15 @@ defaults:
   default_lang: "en"
   follow_symlinks: false
 
+vector_index:
+  vectors:
+    - name: dense
+      kind: dense
+    # Optional hybrid sparse vector:
+    # - name: sparse
+    #   kind: sparse
+    #   model: Qdrant/bm25
+
 sources:
   utilitr:
     kind: markdown_repo
