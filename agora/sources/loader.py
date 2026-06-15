@@ -6,7 +6,7 @@ from typing import Annotated, Any
 import yaml
 from pydantic import BaseModel, Field
 
-from .models.base import SourceDefaults
+from .models.base import SourceDefaults, VectorIndexConfig
 from .models.base import SourcesConfig as _RawSourcesConfig
 from .models.markdown_repo import MarkdownRepoConfig
 
@@ -18,6 +18,7 @@ SourceConfigUnion = Annotated[
 
 class SourcesConfig(BaseModel):
     version: int = 1
+    vector_index: VectorIndexConfig = Field(default_factory=VectorIndexConfig)
     defaults: SourceDefaults
     sources: dict[str, SourceConfigUnion]
 
@@ -48,6 +49,7 @@ def load_sources_config(path: Path) -> SourcesConfig:
     typed = SourcesConfig.model_validate(
         {
             "version": raw.version,
+            "vector_index": raw.vector_index.model_dump(),
             "defaults": raw.defaults.model_dump(),
             "sources": norm_sources,
         }
@@ -87,6 +89,10 @@ def resolve_source(
 
 def validate_and_resolve(path: Path) -> dict[str, SourceConfigUnion]:
     sc = load_sources_config(path)
+    return resolve_sources_config(sc)
+
+
+def resolve_sources_config(sc: SourcesConfig) -> dict[str, SourceConfigUnion]:
     resolved: dict[str, SourceConfigUnion] = {}
     for name, cfg in sc.sources.items():
         cfg = resolve_source(name, cfg, sc.defaults)

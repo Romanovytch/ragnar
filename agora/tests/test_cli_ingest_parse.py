@@ -20,6 +20,7 @@ def test_cli_parse_minimum_ok():
     assert ns.sources_config_path == "sources.yaml"
     assert ns.collection == "utilitr_v1"
     assert ns.source is None
+    assert ns.qdrant_batch_size == 16
 
 
 def test_pick_single_source_falls_back_to_only_one():

@@ -9,11 +9,11 @@ from qdrant_client import QdrantClient
 from tqdm import tqdm
 
 from agora.chunking import Chunk, MarkdownChunker
-from agora.embeddings.remote import RemoteOpenAIEncoder
-from agora.sources.loader import validate_and_resolve
+from agora.embeddings.named import ConfiguredNamedVectorEncoder
+from agora.sources.loader import load_sources_config, resolve_sources_config
 from agora.sources.registry import build_source
 from agora.util import count_tokens, make_chunk_id, slugify
-from agora.vectorstores.qdrant_store import ensure_collection_dense, upsert_dense
+from agora.vectorstores.qdrant_store import ensure_collection, upsert_named
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,6 +36,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--qdrant-api-key", help="Qdrant API key (optional)")
     p.add_argument("--drop-collection", action="store_true", help="Drop & recreate the collection")
     p.add_argument("--batch-size", type=int, default=64, help="Embedding batch size")
+    p.add_argument(
+        "--qdrant-batch-size",
+        type=int,
+        default=16,
+        help="Qdrant point upload batch size",
+    )
     p.add_argument("--dotenv-path", help="Path to a .env file to load before resolving env vars")
 
     # Embeddings (remote OpenAI-compatible)
@@ -156,7 +162,8 @@ def main(argv: list[str] | None = None) -> None:
     # 1) Load & validate config
     cfg_path = Path(args.sources_config_path or "sources.yaml").resolve()
     _ensure_config_exists(cfg_path)
-    resolved = validate_and_resolve(cfg_path)
+    ingestion_config = load_sources_config(cfg_path)
+    resolved = resolve_sources_config(ingestion_config)
 
     # 2) Choose exactly one source
     src_name, cfg = _pick_single_source(resolved, args.source)
@@ -202,25 +209,39 @@ def main(argv: list[str] | None = None) -> None:
     print(f"[info] Produced {len(chunks)} chunks")
 
     # 6) Encode
-    enc = RemoteOpenAIEncoder(
+    enc = ConfiguredNamedVectorEncoder(
+        config=ingestion_config.vector_index,
         api_base=embed_api_base,
         model=embed_model,
         api_key=embed_api_key,
         insecure=bool(args.insecure),
+        default_lang=getattr(cfg, "default_lang", None),
     )
-    embeddings = []
     texts = [c.text for c in chunks]
-    for i in tqdm(range(0, len(texts), args.batch_size), desc="Embedding", unit="batch"):
-        batch = texts[i : i + args.batch_size]
-        embeddings.append(enc.encode(batch, batch_size=len(batch)))
-    import numpy as np
-
-    vecs = np.vstack(embeddings)
+    vector_modes = ingestion_config.vector_index.vectors
+    with tqdm(total=len(vector_modes), desc="Embedding", unit="mode") as pbar:
+        named_vectors = enc.encode(texts, batch_size=args.batch_size)
+        pbar.update(len(vector_modes))
+    dimensions = enc.resolved_dimensions()
 
     # 7) Upsert
     client = _preflight_qdrant(qdrant_url, qdrant_api_key)
-    ensure_collection_dense(client, args.collection, dim=enc.dim, drop=args.drop_collection)
-    upsert_dense(client, args.collection, chunks, vecs)
+    ensure_collection(
+        client,
+        args.collection,
+        ingestion_config.vector_index,
+        dimensions=dimensions,
+        drop=args.drop_collection,
+    )
+    upsert_named(
+        client,
+        args.collection,
+        chunks,
+        ingestion_config.vector_index,
+        named_vectors,
+        dimensions,
+        batch_size=args.qdrant_batch_size,
+    )
 
     print(f"[ok] Ingested {len(chunks)} chunks into '{args.collection}' (source={src_name})")
 
