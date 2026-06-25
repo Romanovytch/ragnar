@@ -12,8 +12,14 @@ from agora.chunking import Chunk, MarkdownChunker
 from agora.embeddings.named import ConfiguredNamedVectorEncoder
 from agora.sources.loader import load_sources_config, resolve_sources_config
 from agora.sources.registry import build_source
-from agora.util import count_tokens, make_chunk_id, slugify
-from agora.vectorstores.qdrant_store import ensure_collection, upsert_named
+from agora.util import count_tokens, make_chunk_id, make_parent_chunk_id, slugify
+from agora.vectorstores.qdrant_store import (
+    ensure_collection,
+    ensure_payload_collection,
+    upsert_named,
+    upsert_payload_points,
+    validate_named_vectors,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -141,6 +147,76 @@ def _ensure_config_exists(cfg_path: Path) -> None:
         )
 
 
+def _chunk_metadata(
+    rec_metadata: dict,
+    text: str,
+    heading_path: list[tuple[int, str]],
+    idx: int,
+    index_key: str = "chunk_index",
+) -> dict:
+    headings = [h for _, h in heading_path if h and h.strip()]
+    chapter = headings[0] if headings else rec_metadata.get("doc_title")
+    section = headings[-1] if headings else rec_metadata.get("doc_title")
+    anchor = slugify(section) if section else None
+    base_url = rec_metadata.get("source_url")
+    url = f"{base_url}#{anchor}" if base_url and anchor else base_url
+
+    return rec_metadata | {
+        "chapter": chapter,
+        "section": section,
+        "breadcrumbs": headings,
+        "token_count": count_tokens(text),
+        "url": url,
+        index_key: idx,
+    }
+
+
+def _parent_index_for_child(
+    child_start: int,
+    child_end: int,
+    parent_ranges: list[tuple[int, int]],
+) -> int:
+    best_index = 0
+    best_overlap = -1
+    for idx, (parent_start, parent_end) in enumerate(parent_ranges):
+        overlap = max(0, min(child_end, parent_end) - max(child_start, parent_start))
+        if overlap > best_overlap:
+            best_index = idx
+            best_overlap = overlap
+    return best_index
+
+
+def _validate_parent_storage_config(cfg: object, args: argparse.Namespace) -> None:
+    if cfg.parent_storage_mode == "none":
+        return
+    if cfg.parent_target_tokens <= args.target_tokens:
+        raise SystemExit(
+            "[!] parent_target_tokens must be greater than --target-tokens "
+            "when parent_storage_mode is enabled."
+        )
+    if cfg.parent_max_tokens <= args.max_tokens:
+        raise SystemExit(
+            "[!] parent_max_tokens must be greater than --max-tokens "
+            "when parent_storage_mode is enabled."
+        )
+
+
+def _parent_collection_name(collection: str) -> str:
+    return f"{collection}_parents"
+
+
+def _drop_parent_collection_if_requested(
+    client: QdrantClient,
+    collection: str,
+    drop: bool,
+) -> None:
+    if not drop:
+        return
+    parent_collection = _parent_collection_name(collection)
+    if client.collection_exists(parent_collection):
+        client.delete_collection(parent_collection)
+
+
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
 
@@ -177,26 +253,50 @@ def main(argv: list[str] | None = None) -> None:
 
     # 5) Chunk
     chunker = MarkdownChunker(args.target_tokens, args.overlap_tokens, args.max_tokens)
+    _validate_parent_storage_config(cfg, args)
+    parent_chunker = MarkdownChunker(
+        cfg.parent_target_tokens,
+        cfg.parent_overlap_tokens,
+        cfg.parent_max_tokens,
+    )
+    parent_storage_enabled = cfg.parent_storage_mode != "none"
     chunks: list[Chunk] = []
+    parent_chunks: list[Chunk] = []
     for rec in tqdm(docs, desc="Chunking", unit="doc"):
         units = chunker.parse_units(rec.text)
-        raw_chunks = chunker.chunk(units)  # list[(text, heading_path)]
-        for idx, (text, heading_path) in enumerate(raw_chunks):
-            headings = [h for _, h in heading_path if h and h.strip()]
-            chapter = headings[0] if headings else rec.metadata.get("doc_title")
-            section = headings[-1] if headings else rec.metadata.get("doc_title")
-            anchor = slugify(section) if section else None
-            base_url = rec.metadata.get("source_url")
-            url = f"{base_url}#{anchor}" if base_url and anchor else base_url
+        parent_ids: list[str] = []
+        parent_ranges: list[tuple[int, int]] = []
+        if parent_storage_enabled:
+            parent_spans = parent_chunker.chunk_spans(units)
+            for parent_idx, parent_span in enumerate(parent_spans):
+                parent_id = make_parent_chunk_id(
+                    rec.metadata.get("file_path", ""),
+                    parent_idx,
+                    rec.metadata.get("git_commit"),
+                )
+                parent_meta = _chunk_metadata(
+                    rec.metadata,
+                    parent_span.text,
+                    parent_span.heading_path,
+                    parent_idx,
+                    index_key="parent_chunk_index",
+                )
+                parent_chunks.append(
+                    Chunk(id=parent_id, text=parent_span.text, metadata=parent_meta)
+                )
+                parent_ids.append(parent_id)
+                parent_ranges.append((parent_span.start_unit, parent_span.end_unit))
 
-            meta = rec.metadata | {
-                "chapter": chapter,
-                "section": section,
-                "breadcrumbs": headings,
-                "token_count": count_tokens(text),
-                "url": url,
-                "chunk_index": idx,
-            }
+        raw_chunks = chunker.chunk_spans(units)
+        for idx, span in enumerate(raw_chunks):
+            meta = _chunk_metadata(rec.metadata, span.text, span.heading_path, idx)
+            if parent_storage_enabled and parent_ids:
+                parent_idx = _parent_index_for_child(
+                    span.start_unit,
+                    span.end_unit,
+                    parent_ranges,
+                )
+                meta["parent_id"] = parent_ids[parent_idx]
 
             cid = make_chunk_id(
                 rec.metadata.get("file_path", ""),
@@ -204,9 +304,11 @@ def main(argv: list[str] | None = None) -> None:
                 rec.metadata.get("git_commit"),
             )
 
-            chunks.append(Chunk(id=str(cid), text=text, metadata=meta))
+            chunks.append(Chunk(id=str(cid), text=span.text, metadata=meta))
 
     print(f"[info] Produced {len(chunks)} chunks")
+    if parent_storage_enabled:
+        print(f"[info] Produced {len(parent_chunks)} parent chunks")
 
     # 6) Encode
     enc = ConfiguredNamedVectorEncoder(
@@ -223,6 +325,7 @@ def main(argv: list[str] | None = None) -> None:
         named_vectors = enc.encode(texts, batch_size=args.batch_size)
         pbar.update(len(vector_modes))
     dimensions = enc.resolved_dimensions()
+    validate_named_vectors(chunks, ingestion_config.vector_index, named_vectors, dimensions)
 
     # 7) Upsert
     client = _preflight_qdrant(qdrant_url, qdrant_api_key)
@@ -233,6 +336,16 @@ def main(argv: list[str] | None = None) -> None:
         dimensions=dimensions,
         drop=args.drop_collection,
     )
+    _drop_parent_collection_if_requested(client, args.collection, args.drop_collection)
+    if parent_storage_enabled:
+        parent_collection = _parent_collection_name(args.collection)
+        ensure_payload_collection(client, parent_collection)
+        upsert_payload_points(
+            client,
+            parent_collection,
+            parent_chunks,
+            batch_size=args.qdrant_batch_size,
+        )
     upsert_named(
         client,
         args.collection,
@@ -244,6 +357,8 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     print(f"[ok] Ingested {len(chunks)} chunks into '{args.collection}' (source={src_name})")
+    if parent_storage_enabled:
+        print(f"[ok] Ingested {len(parent_chunks)} parent chunks into '{parent_collection}'")
 
 
 if __name__ == "__main__":

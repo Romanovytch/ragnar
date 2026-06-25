@@ -76,3 +76,9 @@ def make_chunk_id(file_path: str, idx: int, commit: str | None) -> str:
     ns = uuid.uuid5(uuid.NAMESPACE_URL, "https://book.utilitr.org")
     name = f"{file_path}#{idx}@{commit or 'main'}"
     return str(uuid.uuid5(ns, name))
+
+
+def make_parent_chunk_id(file_path: str, idx: int, commit: str | None) -> str:
+    ns = uuid.uuid5(uuid.NAMESPACE_URL, "https://book.utilitr.org")
+    name = f"{file_path}#parent:{idx}@{commit or 'main'}"
+    return str(uuid.uuid5(ns, name))

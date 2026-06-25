@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from qdrant_client.http.models import Modifier
+from qdrant_client.http.models import Modifier, ScoredPoint
 
 from agora.chunking import Chunk
 from agora.embeddings.named import SparseVectorData
@@ -14,8 +14,12 @@ from agora.sources.models.base import (
 )
 from agora.vectorstores.qdrant_store import (
     build_named_points,
+    build_payload_points,
     ensure_collection,
+    ensure_payload_collection,
+    fetch_parent_chunks_for_hits,
     upsert_named,
+    upsert_payload_points,
     validate_named_vectors,
 )
 
@@ -158,3 +162,78 @@ def test_upsert_named_uses_batched_upload_points():
     assert client.kwargs["collection_name"] == "kb"
     assert client.kwargs["batch_size"] == 3
     assert len(client.kwargs["points"]) == 2
+
+
+def test_payload_points_store_parent_chunk_id_and_text_without_vectors():
+    chunks = [Chunk(id="33333333-3333-5333-8333-333333333333", text="parent", metadata={"n": 3})]
+
+    points = build_payload_points(chunks)
+
+    assert points[0].id == chunks[0].id
+    assert points[0].vector == {}
+    assert points[0].payload == {
+        "n": 3,
+        "chunk_id": chunks[0].id,
+        "text": "parent",
+    }
+
+
+def test_ensure_payload_collection_creates_vectorless_collection():
+    class FakeClient:
+        kwargs = None
+
+        def collection_exists(self, name):
+            assert name == "kb_parents"
+            return False
+
+        def create_collection(self, **kwargs):
+            self.kwargs = kwargs
+
+    client = FakeClient()
+
+    ensure_payload_collection(client, "kb_parents")
+
+    assert client.kwargs == {"collection_name": "kb_parents", "vectors_config": {}}
+
+
+def test_upsert_payload_points_uses_batched_upload_points():
+    class FakeClient:
+        kwargs = None
+
+        def upload_points(self, **kwargs):
+            self.kwargs = kwargs
+
+    client = FakeClient()
+    chunks = [Chunk(id="33333333-3333-5333-8333-333333333333", text="parent", metadata={})]
+
+    upsert_payload_points(client, "kb_parents", chunks, batch_size=5)
+
+    assert client.kwargs["collection_name"] == "kb_parents"
+    assert client.kwargs["batch_size"] == 5
+    assert len(client.kwargs["points"]) == 1
+
+
+def test_fetch_parent_chunks_for_hits_deduplicates_parent_ids():
+    class FakeClient:
+        kwargs = None
+
+        def retrieve(self, **kwargs):
+            self.kwargs = kwargs
+            return ["parent"]
+
+    client = FakeClient()
+    hits = [
+        ScoredPoint(id="1", version=0, score=0.9, payload={"parent_id": "p1"}),
+        ScoredPoint(id="2", version=0, score=0.8, payload={"parent_id": "p1"}),
+        ScoredPoint(id="3", version=0, score=0.7, payload={"parent_id": "p2"}),
+    ]
+
+    parents = fetch_parent_chunks_for_hits(client, "kb_parents", hits)
+
+    assert parents == ["parent"]
+    assert client.kwargs == {
+        "collection_name": "kb_parents",
+        "ids": ["p1", "p2"],
+        "with_payload": True,
+        "with_vectors": False,
+    }

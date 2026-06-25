@@ -22,6 +22,14 @@ class Chunk:
     metadata: dict  # titles, chapters, token_count...
 
 
+@dataclass
+class ChunkSpan:
+    text: str
+    heading_path: list[tuple[int, str]]
+    start_unit: int
+    end_unit: int
+
+
 class MarkdownChunker:
     """Chunk Markdown into model-friendly pieces while preserving code fences.
 
@@ -154,7 +162,7 @@ class MarkdownChunker:
         flush_para()
         return units
 
-    def chunk(self, units: list[Unit]) -> list[tuple[str, list[tuple[int, str]]]]:
+    def chunk_spans(self, units: list[Unit]) -> list[ChunkSpan]:
         """Pack units into chunks with soft/hard token budgets and paragraph-only overlap.
 
         Chunks are built greedily from `Unit`s (paragraphs and code fences). We never
@@ -174,16 +182,18 @@ class MarkdownChunker:
             units: Units from `parse_units()`.
 
         Returns:
-            A list of `(chunk_text, heading_path)` pairs in order.
+            A list of `ChunkSpan` objects in order. `start_unit` and `end_unit`
+            cover the non-overlap source units owned by the chunk.
         """
-        chunks: list[tuple[str, list[tuple[int, str]]]] = []
+        chunks: list[ChunkSpan] = []
         buf: list[str] = []
         buf_units: list[Unit] = []
+        buf_unit_indices: list[int] = []
         buf_tokens = 0
         last_para_for_overlap: str | None = None
 
         def close_chunk():
-            nonlocal buf, buf_units, buf_tokens, last_para_for_overlap
+            nonlocal buf, buf_units, buf_unit_indices, buf_tokens, last_para_for_overlap
             if not buf:
                 return
             heading_path = buf_units[-1].heading_path if buf_units else []
@@ -193,10 +203,22 @@ class MarkdownChunker:
                 if u.kind == "para":
                     last_para_for_overlap = u.text
                     break
-            chunks.append((body, heading_path))
-            buf, buf_units, buf_tokens = [], [], 0
+            if buf_unit_indices:
+                start_unit = min(buf_unit_indices)
+                end_unit = max(buf_unit_indices) + 1
+            else:
+                start_unit = end_unit = 0
+            chunks.append(
+                ChunkSpan(
+                    text=body,
+                    heading_path=heading_path,
+                    start_unit=start_unit,
+                    end_unit=end_unit,
+                )
+            )
+            buf, buf_units, buf_unit_indices, buf_tokens = [], [], [], 0
 
-        for u in units:
+        for unit_index, u in enumerate(units):
             u_tokens = count_tokens(u.text)
 
             # Prepend last para if next unit is para as well (paragraph-only overlap)
@@ -216,6 +238,7 @@ class MarkdownChunker:
                         buf_tokens += ov
                 buf.append(u.text)
                 buf_units.append(u)
+                buf_unit_indices.append(unit_index)
                 buf_tokens += u_tokens
                 continue
 
@@ -236,6 +259,7 @@ class MarkdownChunker:
                         buf_tokens += ov
                 buf.append(u.text)
                 buf_units.append(u)
+                buf_unit_indices.append(unit_index)
                 buf_tokens += u_tokens
                 continue
 
@@ -256,12 +280,18 @@ class MarkdownChunker:
                         buf_tokens += ov
                 buf.append(u.text)
                 buf_units.append(u)
+                buf_unit_indices.append(unit_index)
                 buf_tokens += u_tokens
                 continue
 
             buf.append(u.text)
             buf_units.append(u)
+            buf_unit_indices.append(unit_index)
             buf_tokens += u_tokens
 
         close_chunk()
         return chunks
+
+    def chunk(self, units: list[Unit]) -> list[tuple[str, list[tuple[int, str]]]]:
+        """Pack units into chunks and return the legacy tuple shape."""
+        return [(chunk.text, chunk.heading_path) for chunk in self.chunk_spans(units)]
