@@ -37,6 +37,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting started: getting-started.md
+  - Release notes: release-notes.md
   - Reference:
       - CLI: reference/cli.md
       - Python library: reference/python.md

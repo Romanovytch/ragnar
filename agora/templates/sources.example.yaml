@@ -26,3 +26,8 @@ sources:
     base_url: "https://book.utilitr.org/"
     repo_url_template: "https://github.com/InseeFrLab/utilitR/blob/{commit}/{path}"
     default_lang: "fr"
+    # Optional parent-child retrieval:
+    # parent_storage_mode: classic
+    # parent_target_tokens: 1000
+    # parent_overlap_tokens: 120
+    # parent_max_tokens: 1500

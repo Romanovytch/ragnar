@@ -96,6 +96,14 @@ def ensure_collection_dense(client: QdrantClient, name: str, dim: int, drop: boo
     )
 
 
+def ensure_payload_collection(client: QdrantClient, name: str, drop: bool = False):
+    """Ensure a payload-only collection exists for non-embedded parent chunks."""
+    if drop and client.collection_exists(name):
+        client.delete_collection(name)
+    if not client.collection_exists(name):
+        client.create_collection(collection_name=name, vectors_config={})
+
+
 def validate_named_vectors(
     chunks: list[Chunk],
     vector_index: VectorIndexConfig,
@@ -192,6 +200,57 @@ def upsert_named(
     """Upsert named-vector points for the given chunks."""
     points = build_named_points(chunks, vector_index, named_vectors, dimensions)
     client.upload_points(collection_name=collection, points=points, batch_size=batch_size)
+
+
+def build_payload_points(chunks: list[Chunk]) -> list[PointStruct]:
+    """Build payload-only Qdrant points for parent chunks."""
+    points: list[PointStruct] = []
+    for chunk in chunks:
+        points.append(
+            PointStruct(
+                id=chunk.id,
+                vector={},
+                payload=chunk.metadata | {"chunk_id": chunk.id, "text": chunk.text},
+            )
+        )
+    return points
+
+
+def upsert_payload_points(
+    client: QdrantClient,
+    collection: str,
+    chunks: list[Chunk],
+    batch_size: int = 16,
+):
+    """Upsert payload-only points for the given chunks."""
+    points = build_payload_points(chunks)
+    client.upload_points(collection_name=collection, points=points, batch_size=batch_size)
+
+
+def fetch_parent_chunks_for_hits(
+    client: QdrantClient,
+    parent_collection: str,
+    hits: list[ScoredPoint],
+):
+    """Fetch parent payload points referenced by child search hits."""
+    parent_ids: list[str] = []
+    seen: set[str] = set()
+    for hit in hits:
+        payload = hit.payload or {}
+        parent_id = payload.get("parent_id")
+        if isinstance(parent_id, str) and parent_id not in seen:
+            seen.add(parent_id)
+            parent_ids.append(parent_id)
+
+    if not parent_ids:
+        return []
+
+    return client.retrieve(
+        collection_name=parent_collection,
+        ids=parent_ids,
+        with_payload=True,
+        with_vectors=False,
+    )
 
 
 def upsert_dense(

@@ -307,3 +307,32 @@ def test_vector_index_multi_defaults_to_fastembed_late_interaction(tmp_path: Pat
     assert multi.provider == "fastembed"
     assert multi.model == "answerdotai/answerai-colbert-small-v1"
     assert multi.size is None
+
+
+def test_markdown_source_accepts_classic_parent_storage_config(tmp_path: Path):
+    repo = tmp_path / "r"
+    repo.mkdir()
+    cfg = tmp_path / "sources.yaml"
+    _write_yaml(
+        cfg,
+        f"""
+        version: 1
+        sources:
+          s:
+            kind: markdown_repo
+            repo_path: "{repo}"
+            base_url: "https://docs.example.org"
+            parent_storage_mode: classic
+            parent_target_tokens: 900
+            parent_overlap_tokens: 80
+            parent_max_tokens: 1200
+        """,
+    )
+
+    resolved = validate_and_resolve(cfg)
+    s = resolved["s"]
+
+    assert s.parent_storage_mode == "classic"
+    assert s.parent_target_tokens == 900
+    assert s.parent_overlap_tokens == 80
+    assert s.parent_max_tokens == 1200

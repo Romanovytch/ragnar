@@ -39,6 +39,11 @@ class MarkdownRepoConfig(BaseModel):
     frontmatter_title_keys: list[str] | None = None
     frontmatter_lang_keys: list[str] | None = None
 
+    parent_storage_mode: Literal["none", "classic"] = "none"
+    parent_target_tokens: int = 1000
+    parent_overlap_tokens: int = 120
+    parent_max_tokens: int = 1500
+
     @field_validator("repo_path")
     @classmethod
     def _path_exists(cls, p: Path) -> Path:
@@ -64,4 +69,12 @@ class MarkdownRepoConfig(BaseModel):
                 # Not strictly required, but warn early if it's a constant path
                 # (we still allow it in case someone really wants a fixed page)
                 pass
+        if self.parent_target_tokens <= 0:
+            raise ValueError("parent_target_tokens must be positive")
+        if self.parent_overlap_tokens < 0:
+            raise ValueError("parent_overlap_tokens must be non-negative")
+        if self.parent_max_tokens < self.parent_target_tokens:
+            raise ValueError(
+                "parent_max_tokens must be greater than or equal to parent_target_tokens"
+            )
         return self

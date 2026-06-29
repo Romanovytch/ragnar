@@ -10,6 +10,8 @@ The markdown ingestion pipeline runs via the `agora-ingest` CLI, which loads `so
 
 The pipeline’s output is a Qdrant collection with named vector representations per chunk. The default is a named dense vector, and configurations can add sparse and multi-vector representations on the same point while preserving the chunk id and payload metadata plus the raw chunk text. (agora/vectorstores/qdrant_store.py, agora/embeddings/named.py)
 
+Sources can opt into parent storage with `parent_storage_mode: classic`. In that mode, the regular child chunks are still embedded and upserted to the main collection with deterministic UUIDv5 IDs. Each child payload additionally contains `parent_id`, which points at a larger parent chunk stored as a payload-only point in a dedicated `<collection>_parents` collection. Parent points do not contain vectors; their payload includes a stable queryable `chunk_id` field equal to the parent point id. The Qdrant store also exposes a helper to fetch parent payload points from child search hits. The default `parent_storage_mode: none` preserves classic chunk-only ingestion. (agora/cli/ingest.py, agora/vectorstores/qdrant_store.py, agora/util.py)
+
 ## Repository layout
 
 ```
@@ -45,6 +47,7 @@ agora/
 | Incremental vs full re-index | Full pass every run (all docs are loaded into a list and processed) | (agora/cli/ingest.py ~L167-L175) |
 | Change detection mechanism | [not found in code] |  |
 | Frontmatter handling | YAML frontmatter is parsed and stripped; only title/lang are consumed from it | (agora/util.py ~L48-L61, agora/sources/markdown_source.py ~L143-L161, ~L221-L239) |
+| Parent storage mode | Per-source `parent_storage_mode` can be `"none"` (default) or `"classic"` | (agora/sources/models/markdown_repo.py, agora/cli/ingest.py) |
 
 ## Chunking strategy
 
@@ -117,6 +120,65 @@ agora/
 }
 ```
 
+When `parent_storage_mode: classic` is enabled for a source, child points keep the same point id derivation and vector structure, but add `parent_id` to their payload:
+
+```json
+{
+  "id": "UUIDv5(file_path + child_chunk_index + commit)",
+  "vector": {"dense": "..."},
+  "payload": {
+    "text": "<child chunk text>",
+    "parent_id": "<parent point id>",
+    "source": "utilitr",
+    "source_url": "...",
+    "section": "..."
+  }
+}
+```
+
+Parent chunks are written separately to `<collection>_parents` as payload-only Qdrant points:
+
+```json
+{
+  "id": "<stable parent UUIDv5>",
+  "vector": {},
+  "payload": {
+    "chunk_id": "<same stable parent UUIDv5>",
+    "parent_chunk_index": 0,
+    "text": "<parent chunk text>",
+    "...": "parent chunk metadata"
+  }
+}
+```
+
+The parent ID helper is separate from `make_chunk_id`, so the documented child chunk UUIDv5 contract remains unchanged. Parent payloads use `parent_chunk_index`; child-only `chunk_index` is not added to parent points. This adds a Qdrant payload field and collection shape and therefore requires reviewer sign-off before merging.
+
+# Payload structure example
+```
+{
+  "source": "utilitr",
+  "source_type": "markdown_repo",
+  "file_path": "03_Fiches_thematiques/Fiche_duckdb.qmd",
+  "doc_title": "Manipuler des données avec `duckdb` {#duckdb}",
+  "source_url": "https://book.utilitr.org/03_Fiches_thematiques/Fiche_duckdb.html",
+  "repo_url": "https://github.com/InseeFrLab/utilitR/blob/490a56da18bdd898eeff0ff17ba3aa4057cac543/03_Fiches_thematiques/Fiche_duckdb.qmd",
+  "git_commit": "490a56da18bdd898eeff0ff17ba3aa4057cac543",
+  "lang": "fr",
+  "chapter": "Manipuler des données avec `duckdb` {#duckdb}",
+  "section": "Chargement de données stockées sur le disque dur",
+  "breadcrumbs": [
+    "Manipuler des données avec `duckdb` {#duckdb}",
+    "Utilisation de `duckdb`",
+    "Chargement des données",
+    "Chargement de données stockées sur le disque dur"
+  ],
+  "token_count": 779,
+  "url": "https://book.utilitr.org/03_Fiches_thematiques/Fiche_duckdb.html#chargement-de-données-stockées-sur-le-disque-dur",
+  "chunk_index": 6,
+  "text": "Le code ci-dessous permet de vérifier que le chargement des données a bien fonctionné. La fonction `tbl` permet d'accéder à un objet de la base de données par le nom (de la table), ou par du code SQL (utilisation un peu plus avancée). Par défaut, `duckdb` affiche les 10 premières lignes du résultat, sans effectuer tout le calcul. C'est très pratique et très rapide !
+  }
+```
+
 The default configuration stores only the named `dense` vector. Hybrid configurations add `sparse` and optionally `multi` under the same Qdrant point id. (agora/util.py, agora/cli/ingest.py, agora/embeddings/named.py, agora/vectorstores/qdrant_store.py)
 
 ### Upsert behaviour
@@ -126,6 +188,12 @@ The default configuration stores only the named `dense` vector. Hybrid configura
 | Batch size | No explicit batching; all chunks passed in a single `upsert` call | (agora/vectorstores/qdrant_store.py ~L77-L82) |
 | Stale point deletion strategy | Only `--drop-collection` deletes existing points; no per-file delete | (agora/cli/ingest.py ~L37-L38, agora/vectorstores/qdrant_store.py ~L37-L42) |
 | Conflict / duplicate handling | Qdrant `upsert` with deterministic IDs; no custom conflict logic | (agora/vectorstores/qdrant_store.py ~L45-L82, agora/util.py ~L74-L78) |
+
+Because collections are not versioned and ingestion does not delete stale points
+incrementally, enabling or disabling `parent_storage_mode` or changing parent
+chunk sizing should be rolled out with `--drop-collection`. Otherwise, old
+parent points can remain in `<collection>_parents`, and child payloads may point
+at parent chunks produced by a previous sizing policy.
 
 ## Configuration & environment variables
 
@@ -163,6 +231,34 @@ vector_index:
       kind: multi
       model: answerdotai/answerai-colbert-small-v1
 ```
+
+Per-source parent-child retrieval can be enabled with parent chunk sizing:
+
+```yaml
+sources:
+  utilitr:
+    kind: markdown_repo
+    repo_path: "../utilitR"
+    base_url: "https://book.utilitr.org/"
+    parent_storage_mode: classic
+    parent_target_tokens: 1000
+    parent_overlap_tokens: 120
+    parent_max_tokens: 1500
+```
+
+Parent storage options:
+
+| Option | Default | Meaning |
+|---|---|---|
+| `parent_storage_mode` | `none` | `none` disables parent storage; `classic` stores larger parent chunks in `<collection>_parents` and adds `parent_id` to child payloads. |
+| `parent_target_tokens` | `1000` | Soft target for parent chunks. When `parent_storage_mode` is enabled, this must be greater than child `--target-tokens`. |
+| `parent_overlap_tokens` | `120` | Paragraph-only overlap budget for parent chunks. Code fences are still never split or overlapped. |
+| `parent_max_tokens` | `1500` | Hard ceiling for parent chunks. When `parent_storage_mode` is enabled, this must be greater than child `--max-tokens`. |
+
+Rollout note: switching between `parent_storage_mode: none` and
+`parent_storage_mode: classic`, or changing any parent chunk sizing option,
+should be deployed with `agora-ingest --drop-collection` because Qdrant
+collections are not versioned and stale parent points are not removed otherwise.
 
 ## External dependencies
 

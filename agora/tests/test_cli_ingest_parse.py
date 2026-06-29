@@ -1,6 +1,17 @@
 from __future__ import annotations
 
-from agora.cli.ingest import _pick_single_source, build_parser
+from types import SimpleNamespace
+
+import pytest
+
+from agora.cli.ingest import (
+    _chunk_metadata,
+    _drop_parent_collection_if_requested,
+    _parent_collection_name,
+    _pick_single_source,
+    _validate_parent_storage_config,
+    build_parser,
+)
 
 
 def test_cli_parse_minimum_ok():
@@ -45,3 +56,86 @@ def test_pick_single_source_handles_unknown_requested():
         AssertionError(), "should have raised"
     except SystemExit as e:
         assert "Unknown source" in str(e)
+
+
+def test_parent_storage_size_validation_requires_larger_parent_budgets():
+    cfg = SimpleNamespace(
+        parent_storage_mode="classic",
+        parent_target_tokens=800,
+        parent_max_tokens=1200,
+    )
+    args = SimpleNamespace(target_tokens=800, max_tokens=1200)
+
+    with pytest.raises(SystemExit, match="parent_target_tokens"):
+        _validate_parent_storage_config(cfg, args)
+
+
+def test_parent_storage_size_validation_requires_larger_parent_max_budget():
+    cfg = SimpleNamespace(
+        parent_storage_mode="classic",
+        parent_target_tokens=900,
+        parent_max_tokens=1200,
+    )
+    args = SimpleNamespace(target_tokens=800, max_tokens=1200)
+
+    with pytest.raises(SystemExit, match="parent_max_tokens"):
+        _validate_parent_storage_config(cfg, args)
+
+
+def test_parent_storage_size_validation_is_skipped_when_disabled():
+    cfg = SimpleNamespace(
+        parent_storage_mode="none",
+        parent_target_tokens=1,
+        parent_max_tokens=1,
+    )
+    args = SimpleNamespace(target_tokens=800, max_tokens=1200)
+
+    _validate_parent_storage_config(cfg, args)
+
+
+def test_parent_metadata_uses_parent_chunk_index_without_child_chunk_index():
+    meta = _chunk_metadata(
+        {"doc_title": "Doc", "source_url": "https://example.org/doc"},
+        "Parent text",
+        [(1, "Doc"), (2, "Section")],
+        3,
+        index_key="parent_chunk_index",
+    )
+
+    assert meta["parent_chunk_index"] == 3
+    assert "chunk_index" not in meta
+
+
+def test_drop_parent_collection_if_requested_uses_parent_collection_name():
+    class FakeClient:
+        deleted = []
+
+        def collection_exists(self, name):
+            return name == "kb_parents"
+
+        def delete_collection(self, name):
+            self.deleted.append(name)
+
+    client = FakeClient()
+
+    _drop_parent_collection_if_requested(client, "kb", drop=True)
+
+    assert _parent_collection_name("kb") == "kb_parents"
+    assert client.deleted == ["kb_parents"]
+
+
+def test_drop_parent_collection_if_requested_skips_without_drop_flag():
+    class FakeClient:
+        deleted = []
+
+        def collection_exists(self, name):
+            return True
+
+        def delete_collection(self, name):
+            self.deleted.append(name)
+
+    client = FakeClient()
+
+    _drop_parent_collection_if_requested(client, "kb", drop=False)
+
+    assert client.deleted == []
