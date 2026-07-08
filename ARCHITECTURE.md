@@ -6,7 +6,7 @@
 
 ## Overview
 
-The markdown ingestion pipeline runs via the `agora-ingest` CLI, which loads `sources.yaml`, discovers markdown-like files through a source adapter, chunks them into token-budgeted segments, embeds each chunk with a remote OpenAI-compatible endpoint, and upserts the results into a Qdrant collection. (pyproject.toml ~L20-L22, agora/cli/ingest.py ~L19-L223, agora/sources/markdown_source.py ~L194-L239, agora/chunking.py ~L45-L267, agora/embeddings/remote.py ~L68-L108, agora/vectorstores/qdrant_store.py ~L18-L83)
+The markdown ingestion pipeline runs via the `agora-ingest` CLI, which loads `sources.yaml`, discovers markdown-like files through a source adapter, chunks them into heading-aligned, token-budgeted segments, embeds each chunk with heading context through a remote OpenAI-compatible endpoint, and upserts the results into a Qdrant collection. Heading alignment can be configured with `--split-heading-level`; when omitted, any heading path change closes the current chunk. (pyproject.toml ~L20-L22, agora/cli/ingest.py ~L19-L223, agora/sources/markdown_source.py ~L194-L239, agora/chunking.py ~L45-L267, agora/embeddings/remote.py ~L68-L108, agora/vectorstores/qdrant_store.py ~L18-L83)
 
 The pipeline’s output is a Qdrant collection with named vector representations per chunk. The default is a named dense vector, and configurations can add sparse and multi-vector representations on the same point while preserving the chunk id and payload metadata plus the raw chunk text. (agora/vectorstores/qdrant_store.py, agora/embeddings/named.py)
 
@@ -32,9 +32,9 @@ agora/
 2. Required connection parameters are resolved from CLI/env, then `sources.yaml` is validated and resolved. (agora/cli/ingest.py ~L148-L160, agora/sources/loader.py ~L88-L94)
 3. A single source is selected and instantiated via the registry into a `MarkdownRepoSource`. (agora/cli/ingest.py ~L95-L165, agora/sources/registry.py ~L22-L48)
 4. `MarkdownRepoSource.iter_docs()` discovers files, strips frontmatter, infers title/lang, and emits `DocRecord` metadata. (agora/sources/markdown_source.py ~L119-L239, agora/util.py ~L48-L61)
-5. `MarkdownChunker.parse_units()` parses headings/paragraphs/code fences, and `MarkdownChunker.chunk()` builds token-budgeted chunks with paragraph-only overlap. (agora/chunking.py ~L45-L267)
+5. `MarkdownChunker.parse_units()` parses headings/paragraphs/code fences, and `MarkdownChunker.chunk()` builds token-budgeted chunks that stop at heading changes. If `--split-heading-level` is set, only changes to that exact heading level define section boundaries; ancestor headings stay in breadcrumbs and embedding input. Paragraph-only overlap stays within the same configured section. (agora/chunking.py ~L45-L267)
 6. For each chunk, `agora-ingest` computes headings, token counts, URLs, and a deterministic UUID chunk id. (agora/cli/ingest.py ~L171-L200, agora/util.py ~L29-L78)
-7. `ConfiguredNamedVectorEncoder.encode()` builds the configured named vector outputs. Dense mode uses the OpenAI-compatible embedding endpoint, sparse mode uses FastEmbed sparse text models such as `Qdrant/bm25`, and multi-vector mode uses FastEmbed late-interaction models such as `answerdotai/answerai-colbert-small-v1`. BM25 language defaults to the selected source `default_lang`. (agora/cli/ingest.py, agora/embeddings/remote.py, agora/embeddings/named.py)
+7. `ConfiguredNamedVectorEncoder.encode()` builds the configured named vector outputs from transient embedding text prefixed with breadcrumbs, falling back to `doc_title` when breadcrumbs are absent. Dense mode uses the OpenAI-compatible embedding endpoint, sparse mode uses FastEmbed sparse text models such as `Qdrant/bm25`, and multi-vector mode uses FastEmbed late-interaction models such as `answerdotai/answerai-colbert-small-v1`. BM25 language defaults to the selected source `default_lang`. (agora/cli/ingest.py, agora/embeddings/remote.py, agora/embeddings/named.py)
 8. Qdrant connectivity is preflighted, a named-vector collection is ensured, vector outputs are validated against the configured schema, and all points are upserted. (agora/cli/ingest.py, agora/vectorstores/qdrant_store.py)
 
 ## Source loading
@@ -54,9 +54,9 @@ agora/
 | Aspect | Detail | Source |
 |---|---|---|
 | Library / implementation | Custom `MarkdownChunker` built on `markdown-it-py` token stream | (agora/chunking.py ~L5-L67) |
-| Split boundary (heading / size / hybrid) | Units are paragraphs or fenced code blocks; chunking is driven by token budgets, not by headings | (agora/chunking.py ~L45-L173, ~L157-L267) |
+| Split boundary (heading / size / hybrid) | Units are paragraphs or fenced code blocks; heading changes force chunk boundaries by default. `--split-heading-level N` instead splits on changes to the active HN section, then token budgets split within that section | (agora/chunking.py ~L45-L173, ~L157-L267) |
 | Chunk size (unit) | `target_tokens` (soft) and `max_tokens` (hard), measured via tokenizer tokens | (agora/chunking.py ~L37-L43, ~L199-L244, agora/util.py ~L12-L33) |
-| Chunk overlap | Paragraph-only overlap up to `overlap_tokens`; code fences never overlap | (agora/chunking.py ~L161-L207) |
+| Chunk overlap | Paragraph-only overlap up to `overlap_tokens` within the same configured heading section; code fences never overlap | (agora/chunking.py ~L161-L207) |
 | Metadata attached to each chunk | Source metadata plus chapter/section/breadcrumbs, `token_count`, `url`, and `chunk_index` | (agora/cli/ingest.py ~L178-L192, agora/sources/markdown_source.py ~L229-L239) |
 
 ### Chunk metadata schema
@@ -86,6 +86,7 @@ agora/
 | Aspect | Detail | Source |
 |---|---|---|
 | Provider & model | Dense mode uses the remote OpenAI-compatible embeddings endpoint; sparse and multi-vector modes use FastEmbed | (agora/cli/ingest.py, agora/embeddings/remote.py, agora/embeddings/named.py) |
+| Embedding input | Raw payload text is kept unchanged, but encoder input is prefixed with `breadcrumbs` joined by ` > ` and a blank line; if breadcrumbs are missing, `doc_title` is used as fallback context | (agora/cli/ingest.py) |
 | Embedding dimension | Dense dimensions are probed from the embeddings API; multi-vector dimensions are read from the FastEmbed late-interaction model unless fixed in `vector_index` | (agora/embeddings/remote.py, agora/embeddings/named.py) |
 | Batch size | CLI `--batch-size` (default 64) controls embedding batches | (agora/cli/ingest.py ~L38-L39, ~L213-L215) |
 | Rate-limit / retry handling | No retry/backoff; non-200 responses raise `RuntimeError` | (agora/embeddings/remote.py ~L95-L103) |
