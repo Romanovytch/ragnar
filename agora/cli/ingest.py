@@ -62,6 +62,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--target-tokens", type=int, default=800)
     p.add_argument("--overlap-tokens", type=int, default=120)
     p.add_argument("--max-tokens", type=int, default=1200)
+    p.add_argument(
+        "--split-heading-level",
+        type=int,
+        choices=range(1, 7),
+        metavar="{1..6}",
+        help=(
+            "Exact Markdown heading level that defines section chunk boundaries. "
+            "If omitted, any heading path change splits chunks."
+        ),
+    )
 
     return p
 
@@ -171,6 +181,23 @@ def _chunk_metadata(
     }
 
 
+def _embedding_text(chunk: Chunk) -> str:
+    breadcrumbs = chunk.metadata.get("breadcrumbs")
+    headings = (
+        [str(item).strip() for item in breadcrumbs if isinstance(item, str) and item.strip()]
+        if isinstance(breadcrumbs, list)
+        else []
+    )
+    if not headings:
+        doc_title = chunk.metadata.get("doc_title")
+        if isinstance(doc_title, str) and doc_title.strip():
+            headings = [doc_title.strip()]
+
+    if not headings:
+        return chunk.text
+    return f"{' > '.join(headings)}\n\n{chunk.text}"
+
+
 def _parent_index_for_child(
     child_start: int,
     child_end: int,
@@ -252,12 +279,18 @@ def main(argv: list[str] | None = None) -> None:
     print(f"[info] Source='{src_name}': discovered {len(docs)} documents")
 
     # 5) Chunk
-    chunker = MarkdownChunker(args.target_tokens, args.overlap_tokens, args.max_tokens)
+    chunker = MarkdownChunker(
+        args.target_tokens,
+        args.overlap_tokens,
+        args.max_tokens,
+        split_heading_level=args.split_heading_level,
+    )
     _validate_parent_storage_config(cfg, args)
     parent_chunker = MarkdownChunker(
         cfg.parent_target_tokens,
         cfg.parent_overlap_tokens,
         cfg.parent_max_tokens,
+        split_heading_level=args.split_heading_level,
     )
     parent_storage_enabled = cfg.parent_storage_mode != "none"
     chunks: list[Chunk] = []
@@ -319,7 +352,7 @@ def main(argv: list[str] | None = None) -> None:
         insecure=bool(args.insecure),
         default_lang=getattr(cfg, "default_lang", None),
     )
-    texts = [c.text for c in chunks]
+    texts = [_embedding_text(c) for c in chunks]
     vector_modes = ingestion_config.vector_index.vectors
     with tqdm(total=len(vector_modes), desc="Embedding", unit="mode") as pbar:
         named_vectors = enc.encode(texts, batch_size=args.batch_size)
