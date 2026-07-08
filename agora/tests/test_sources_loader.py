@@ -214,6 +214,44 @@ def test_multiple_sources_resolve_independently(tmp_path: Path):
     assert one.base_url.endswith("/") and two.base_url.endswith("/")  # normalized
 
 
+def test_markdown_source_synthetic_llm_summary_flag_is_optional(tmp_path: Path):
+    repo1 = tmp_path / "missing_flag"
+    repo1.mkdir()
+    repo2 = tmp_path / "enabled"
+    repo2.mkdir()
+    repo3 = tmp_path / "disabled"
+    repo3.mkdir()
+    cfg = tmp_path / "sources.yaml"
+    _write_yaml(
+        cfg,
+        f"""
+        version: 1
+        sources:
+          missing_flag:
+            kind: markdown_repo
+            repo_path: "{repo1}"
+            base_url: "https://missing.example.org"
+          enabled:
+            kind: markdown_repo
+            repo_path: "{repo2}"
+            base_url: "https://enabled.example.org"
+            synthetic_llm_summary: True
+          disabled:
+            kind: markdown_repo
+            repo_path: "{repo3}"
+            base_url: "https://disabled.example.org"
+            synthetic_llm_summary: False
+        """,
+    )
+
+    resolved = validate_and_resolve(cfg)
+
+    assert resolved["missing_flag"].synthetic_llm_summary is False
+    assert resolved["enabled"].synthetic_llm_summary is True
+    assert resolved["disabled"].synthetic_llm_summary is False
+    assert resolved["disabled"].parent_storage_mode == "none"
+
+
 def test_vector_index_defaults_to_named_dense(tmp_path: Path):
     repo = tmp_path / "r"
     repo.mkdir()
