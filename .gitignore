@@ -18,6 +18,7 @@ venv/
 .mypy_cache/
 .pytest_cache/
 sources.yaml
+.fastembed_cache/
 
 # IDEs
 .vscode/
