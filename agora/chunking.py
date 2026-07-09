@@ -40,6 +40,7 @@ class MarkdownChunker:
         target_tokens: Soft target size for a chunk (tokens).
         overlap_tokens: Max paragraph-only overlap between consecutive chunks.
         max_tokens: Hard ceiling for a chunk size (tokens).
+        split_headings: Whether heading changes can close chunks.
         split_heading_level: Optional exact heading level that defines section
             boundaries. When omitted, any heading path change closes the chunk.
     """
@@ -49,11 +50,13 @@ class MarkdownChunker:
         target_tokens: int = 800,
         overlap_tokens: int = 120,
         max_tokens: int = 1200,
+        split_headings: bool = True,
         split_heading_level: int | None = None,
     ) -> None:
         self.target = target_tokens
         self.overlap = overlap_tokens  # paragraph-only
         self.max_tokens = max_tokens
+        self.split_headings = split_headings
         if split_heading_level is not None and not 1 <= split_heading_level <= 6:
             raise ValueError("split_heading_level must be between 1 and 6")
         self.split_heading_level = split_heading_level
@@ -178,10 +181,11 @@ class MarkdownChunker:
         split inside a unit, so code fences remain intact. By default, heading changes
         close the current chunk so a chunk only owns source units from one Markdown
         section. If `split_heading_level` is set, only changes to that exact heading
-        section close chunks; ancestor headings remain breadcrumb context. When
-        starting a new chunk, we optionally prepend the last paragraph from the
-        previous chunk in the same section (if it fits the `overlap_tokens` budget) to
-        preserve continuity. Code is never overlapped.
+        section close chunks; ancestor headings remain breadcrumb context. Heading
+        boundaries can also be disabled for larger parent chunks. When starting a new
+        chunk, we optionally prepend the last paragraph from the previous chunk in the
+        same section (if it fits the `overlap_tokens` budget) to preserve continuity.
+        Code is never overlapped.
 
         Cutting rules:
 
@@ -207,6 +211,8 @@ class MarkdownChunker:
         last_para_for_overlap: tuple[str, list[tuple[int, str]]] | None = None
 
         def section_key(heading_path: list[tuple[int, str]]):
+            if not self.split_headings:
+                return None
             if self.split_heading_level is None:
                 return tuple(heading_path)
             path: list[tuple[int, str]] = []

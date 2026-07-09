@@ -153,3 +153,22 @@ def test_split_heading_level_overlap_does_not_cross_exact_level_sections():
 
     assert len(spans) == 2
     assert "Alpha" not in spans[1].text
+
+
+def test_chunker_can_disable_heading_boundaries_for_parent_chunks():
+    chunker = MarkdownChunker(
+        target_tokens=200,
+        overlap_tokens=20,
+        max_tokens=300,
+        split_headings=False,
+    )
+    units = chunker.parse_units(
+        "# Doc\n\nIntro.\n\n## First\n\nFirst text.\n\n## Second\n\nSecond text.\n"
+    )
+
+    spans = chunker.chunk_spans(units)
+
+    assert len(spans) == 1
+    assert "First text" in spans[0].text
+    assert "Second text" in spans[0].text
+    assert spans[0].heading_path == [(1, "Doc"), (2, "Second")]
