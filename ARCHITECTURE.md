@@ -10,7 +10,7 @@ The markdown ingestion pipeline runs via the `agora-ingest` CLI, which loads `so
 
 The pipeline’s output is a Qdrant collection with named vector representations per chunk. The default is a named dense vector, and configurations can add sparse and multi-vector representations on the same point while preserving the chunk id and payload metadata plus the raw chunk text. (agora/vectorstores/qdrant_store.py, agora/embeddings/named.py)
 
-Sources can opt into parent storage with `parent_storage_mode: classic`. In that mode, the regular child chunks are still embedded and upserted to the main collection with deterministic UUIDv5 IDs. Each child payload additionally contains `parent_id`, which points at a larger parent chunk stored as a payload-only point in a dedicated `<collection>_parents` collection. Parent points do not contain vectors; their payload includes a stable queryable `chunk_id` field equal to the parent point id. The Qdrant store also exposes a helper to fetch parent payload points from child search hits. The default `parent_storage_mode: none` preserves classic chunk-only ingestion. (agora/cli/ingest.py, agora/vectorstores/qdrant_store.py, agora/util.py)
+Sources can opt into parent storage with `parent_storage_mode: classic`. In that mode, the regular child chunks are still embedded and upserted to the main collection with deterministic UUIDv5 IDs. Each child payload additionally contains `parent_id`, which points at a larger parent chunk stored as a payload-only point in a dedicated `<collection>_parents` collection. Parent chunks are token-budgeted but do not split on heading boundaries, so they may span multiple Markdown heading paths. To preserve generation context, parent payload text re-inserts Markdown heading lines before each covered section and stores all covered paths in `breadcrumb_paths`. Parent points do not contain vectors; their payload includes a stable queryable `chunk_id` field equal to the parent point id. The Qdrant store also exposes a helper to fetch parent payload points from child search hits. The default `parent_storage_mode: none` preserves classic chunk-only ingestion. (agora/cli/ingest.py, agora/vectorstores/qdrant_store.py, agora/util.py)
 
 ## Repository layout
 
@@ -146,13 +146,14 @@ Parent chunks are written separately to `<collection>_parents` as payload-only Q
   "payload": {
     "chunk_id": "<same stable parent UUIDv5>",
     "parent_chunk_index": 0,
+    "breadcrumb_paths": [["Chapter"], ["Chapter", "Section A"], ["Chapter", "Section B"]],
     "text": "<parent chunk text>",
     "...": "parent chunk metadata"
   }
 }
 ```
 
-The parent ID helper is separate from `make_chunk_id`, so the documented child chunk UUIDv5 contract remains unchanged. Parent payloads use `parent_chunk_index`; child-only `chunk_index` is not added to parent points. This adds a Qdrant payload field and collection shape and therefore requires reviewer sign-off before merging.
+The parent ID helper is separate from `make_chunk_id`, so the documented child chunk UUIDv5 contract remains unchanged. Parent payloads use `parent_chunk_index`; child-only `chunk_index` is not added to parent points. Parent payloads keep the regular `breadcrumbs` field for the last covered heading path and add `breadcrumb_paths` for every unique heading path covered by the larger parent text. This adds a Qdrant payload field and collection shape and therefore requires reviewer sign-off before merging.
 
 # Payload structure example
 ```

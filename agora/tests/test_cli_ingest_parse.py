@@ -4,12 +4,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from agora.chunking import Chunk
+from agora.chunking import Chunk, MarkdownChunker
 from agora.cli.ingest import (
     _chunk_metadata,
     _drop_parent_collection_if_requested,
     _embedding_text,
+    _heading_paths_for_span,
     _parent_collection_name,
+    _parent_text_with_headings,
     _pick_single_source,
     _validate_parent_storage_config,
     build_parser,
@@ -157,6 +159,48 @@ def test_embedding_text_returns_raw_text_without_heading_context():
     chunk = Chunk(id="c1", text="Plain text.", metadata={})
 
     assert _embedding_text(chunk) == "Plain text."
+
+
+def test_parent_text_with_headings_renders_multiple_paths_for_generation():
+    chunker = MarkdownChunker(
+        target_tokens=200,
+        overlap_tokens=20,
+        max_tokens=300,
+        split_headings=False,
+    )
+    units = chunker.parse_units(
+        "# Doc\n\nIntro text.\n\n## First\n\nFirst text.\n\n## Second\n\nSecond text.\n"
+    )
+    span = chunker.chunk_spans(units)[0]
+
+    assert _parent_text_with_headings(units, span) == (
+        "# Doc\n\nIntro text.\n\n## First\n\nFirst text.\n\n## Second\n\nSecond text."
+    )
+
+
+def test_parent_span_can_store_multiple_breadcrumb_paths():
+    chunker = MarkdownChunker(
+        target_tokens=200,
+        overlap_tokens=20,
+        max_tokens=300,
+        split_headings=False,
+    )
+    units = chunker.parse_units(
+        "# Doc\n\nIntro text.\n\n## First\n\nFirst text.\n\n## Second\n\nSecond text.\n"
+    )
+    span = chunker.chunk_spans(units)[0]
+    paths = _heading_paths_for_span(units, span)
+    meta = _chunk_metadata(
+        {"doc_title": "Doc", "source_url": "https://example.org/doc"},
+        _parent_text_with_headings(units, span),
+        span.heading_path,
+        0,
+        index_key="parent_chunk_index",
+    )
+    meta["breadcrumb_paths"] = [[title for _, title in path] for path in paths]
+
+    assert meta["breadcrumbs"] == ["Doc", "Second"]
+    assert meta["breadcrumb_paths"] == [["Doc"], ["Doc", "First"], ["Doc", "Second"]]
 
 
 def test_drop_parent_collection_if_requested_uses_parent_collection_name():
