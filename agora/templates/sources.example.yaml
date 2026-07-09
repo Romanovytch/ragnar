@@ -26,7 +26,10 @@ sources:
     base_url: "https://book.utilitr.org/"
     repo_url_template: "https://github.com/InseeFrLab/utilitR/blob/{commit}/{path}"
     default_lang: "fr"
-    # synthetic_llm_summary: False
+    # Optional LLM summary retrieval. Disabled by default.
+    # synthetic_llm_summary: false
+    # synthetic_llm_summary_group_max_tokens: 3000
+    # synthetic_llm_summary_max_sentences: 3
     # Optional parent-child retrieval:
     # parent_storage_mode: classic
     # parent_target_tokens: 1000

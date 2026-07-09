@@ -236,6 +236,8 @@ def test_markdown_source_synthetic_llm_summary_flag_is_optional(tmp_path: Path):
             repo_path: "{repo2}"
             base_url: "https://enabled.example.org"
             synthetic_llm_summary: True
+            synthetic_llm_summary_group_max_tokens: 4000
+            synthetic_llm_summary_max_sentences: 2
           disabled:
             kind: markdown_repo
             repo_path: "{repo3}"
@@ -248,6 +250,8 @@ def test_markdown_source_synthetic_llm_summary_flag_is_optional(tmp_path: Path):
 
     assert resolved["missing_flag"].synthetic_llm_summary is False
     assert resolved["enabled"].synthetic_llm_summary is True
+    assert resolved["enabled"].synthetic_llm_summary_group_max_tokens == 4000
+    assert resolved["enabled"].synthetic_llm_summary_max_sentences == 2
     assert resolved["disabled"].synthetic_llm_summary is False
     assert resolved["disabled"].parent_storage_mode == "none"
 

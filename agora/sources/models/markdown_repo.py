@@ -44,6 +44,10 @@ class MarkdownRepoConfig(BaseModel):
     parent_overlap_tokens: int = 120
     parent_max_tokens: int = 1500
 
+    synthetic_llm_summary: bool = False
+    synthetic_llm_summary_group_max_tokens: int = 3000
+    synthetic_llm_summary_max_sentences: int = 3
+
     @field_validator("repo_path")
     @classmethod
     def _path_exists(cls, p: Path) -> Path:
@@ -77,4 +81,8 @@ class MarkdownRepoConfig(BaseModel):
             raise ValueError(
                 "parent_max_tokens must be greater than or equal to parent_target_tokens"
             )
+        if self.synthetic_llm_summary_group_max_tokens <= 0:
+            raise ValueError("synthetic_llm_summary_group_max_tokens must be positive")
+        if self.synthetic_llm_summary_max_sentences <= 0:
+            raise ValueError("synthetic_llm_summary_max_sentences must be positive")
         return self

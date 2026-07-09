@@ -9,7 +9,9 @@ from agora.cli.ingest import (
     _drop_parent_collection_if_requested,
     _parent_collection_name,
     _pick_single_source,
+    _summary_collection_name,
     _validate_parent_storage_config,
+    _validate_summary_config,
     build_parser,
 )
 
@@ -139,3 +141,30 @@ def test_drop_parent_collection_if_requested_skips_without_drop_flag():
     _drop_parent_collection_if_requested(client, "kb", drop=False)
 
     assert client.deleted == []
+
+
+def test_summary_config_validation_is_skipped_when_disabled():
+    cfg = SimpleNamespace(
+        synthetic_llm_summary=False,
+        synthetic_llm_summary_group_max_tokens=1,
+        synthetic_llm_summary_max_sentences=1,
+    )
+    args = SimpleNamespace(max_tokens=1200)
+
+    _validate_summary_config(cfg, args)
+
+
+def test_summary_config_validation_requires_larger_group_budget():
+    cfg = SimpleNamespace(
+        synthetic_llm_summary=True,
+        synthetic_llm_summary_group_max_tokens=1200,
+        synthetic_llm_summary_max_sentences=3,
+    )
+    args = SimpleNamespace(max_tokens=1200)
+
+    with pytest.raises(SystemExit, match="synthetic_llm_summary_group_max_tokens"):
+        _validate_summary_config(cfg, args)
+
+
+def test_summary_collection_name_uses_sibling_collection():
+    assert _summary_collection_name("kb") == "kb_summaries"

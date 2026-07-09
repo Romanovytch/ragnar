@@ -120,6 +120,11 @@ EMBED_MODEL=model-name
 # Qdrant
 QDRANT_API_KEY=api-key
 QDRANT_URL=http://qdrant:6333
+
+# Optional synthetic LLM summaries
+LLM_API_BASE=https://my-chat-model-url/v1
+LLM_API_KEY=api-key
+LLM_MODEL=model-name
 ```
 > The ingest CLI uses CLI args first, then env vars, and can also load a `.env` file via `--dotenv-path` (absolute or relative).
 
@@ -162,6 +167,9 @@ This command creates a pre-configured `sources.yaml`. Edit the `sources:` sectio
 - `repo_url_template` *(optional)*: template for repo links, e.g. `https://github.com/org/repo/blob/{commit}/{path}`
 - `default_lang` *(optional)*: main language if different than default English
 - `exclude_dirs`, `include_globs` *(optional)*
+- `synthetic_llm_summary` *(optional, default `false`)*: generate LLM summaries for grouped raw chunks and store them in a separate summary collection
+- `synthetic_llm_summary_group_max_tokens` *(optional, default `3000`)*: token budget used to group raw chunks before each LLM call; it must be larger than `--max-tokens` when summaries are enabled
+- `synthetic_llm_summary_max_sentences` *(optional, default `3`)*: maximum number of sentences kept in each generated summary
 
 Example config for [utilitR](https://book.utilitr.org/):
 ```yaml
@@ -181,7 +189,21 @@ sources:
     repo_url_template: "https://github.com/InseeFrLab/utilitR/blob/{commit}/{path}"
     default_lang: "fr"
     exclude_dirs: [".git", "_book", "docs", ".quarto", "renv", ".github"]
+    synthetic_llm_summary: false
+    # To enable summary retrieval:
+    # synthetic_llm_summary: true
+    # synthetic_llm_summary_group_max_tokens: 3000
+    # synthetic_llm_summary_max_sentences: 3
 ```
+
+When `synthetic_llm_summary` is `false`, ingestion keeps the existing raw-chunk behavior.
+When it is `true`, Agora groups adjacent raw chunks from the same document, asks the
+configured OpenAI-compatible chat model for a JSON `{summary, keywords}` result, embeds
+the generated summaries, and writes them to `<collection>_summaries`. Summary payloads
+keep the raw chunk metadata shape, add `summary` and `keywords`, and preserve
+`source_chunk_ids`/`source_chunk_indexes` so retrieval can later display the original
+source chunks instead of only the generated summary. If your `vector_index` includes
+sparse vectors, summary points are stored with those sparse vectors too.
 
 Validate your config YAML at any time:
 ```shell
@@ -221,6 +243,7 @@ usage: agora-ingest [-h]
                     --collection NAME
                     [--dotenv-path PATH]
                     [--embed-api-base URL] [--embed-model ID] [--embed-api-key KEY]
+                    [--llm-api-base URL] [--llm-model ID] [--llm-api-key KEY]
                     [--qdrant-url URL] [--qdrant-api-key KEY]
                     [--insecure]
                     [--target-tokens N] [--overlap-tokens N] [--max-tokens N]
