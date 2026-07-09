@@ -40,14 +40,26 @@ class MarkdownChunker:
         target_tokens: Soft target size for a chunk (tokens).
         overlap_tokens: Max paragraph-only overlap between consecutive chunks.
         max_tokens: Hard ceiling for a chunk size (tokens).
+        split_headings: Whether heading changes can close chunks.
+        split_heading_level: Optional exact heading level that defines section
+            boundaries. When omitted, any heading path change closes the chunk.
     """
 
     def __init__(
-        self, target_tokens: int = 800, overlap_tokens: int = 120, max_tokens: int = 1200
+        self,
+        target_tokens: int = 800,
+        overlap_tokens: int = 120,
+        max_tokens: int = 1200,
+        split_headings: bool = True,
+        split_heading_level: int | None = None,
     ) -> None:
         self.target = target_tokens
         self.overlap = overlap_tokens  # paragraph-only
         self.max_tokens = max_tokens
+        self.split_headings = split_headings
+        if split_heading_level is not None and not 1 <= split_heading_level <= 6:
+            raise ValueError("split_heading_level must be between 1 and 6")
+        self.split_heading_level = split_heading_level
         self.md = MarkdownIt("commonmark").enable("table").enable("strikethrough")
 
     def parse_units(self, text: str) -> list[Unit]:
@@ -166,17 +178,23 @@ class MarkdownChunker:
         """Pack units into chunks with soft/hard token budgets and paragraph-only overlap.
 
         Chunks are built greedily from `Unit`s (paragraphs and code fences). We never
-        split inside a unit, so code fences remain intact. When starting a new chunk,
-        we optionally prepend the last paragraph from the previous chunk (if it fits
-        the `overlap_tokens` budget) to preserve continuity. Code is never overlapped.
+        split inside a unit, so code fences remain intact. By default, heading changes
+        close the current chunk so a chunk only owns source units from one Markdown
+        section. If `split_heading_level` is set, only changes to that exact heading
+        section close chunks; ancestor headings remain breadcrumb context. Heading
+        boundaries can also be disabled for larger parent chunks. When starting a new
+        chunk, we optionally prepend the last paragraph from the previous chunk in the
+        same section (if it fits the `overlap_tokens` budget) to preserve continuity.
+        Code is never overlapped.
 
         Cutting rules:
 
         1) If adding a unit would exceed `max_tokens`: close current chunk.
         2) If already >= `target_tokens` and next unit is a paragraph: close chunk (soft cut).
-        3) Otherwise, keep appending.
+        3) If the next unit enters a different configured heading section: close chunk.
+        4) Otherwise, keep appending.
 
-        The chunk's `heading_path` is taken from the last unit it contains.
+        The chunk's `heading_path` is taken from the non-overlap source units it owns.
 
         Args:
             units: Units from `parse_units()`.
@@ -190,22 +208,50 @@ class MarkdownChunker:
         buf_units: list[Unit] = []
         buf_unit_indices: list[int] = []
         buf_tokens = 0
-        last_para_for_overlap: str | None = None
+        last_para_for_overlap: tuple[str, list[tuple[int, str]]] | None = None
+
+        def section_key(heading_path: list[tuple[int, str]]):
+            if not self.split_headings:
+                return None
+            if self.split_heading_level is None:
+                return tuple(heading_path)
+            path: list[tuple[int, str]] = []
+            for level, title in heading_path:
+                path.append((level, title))
+                if level == self.split_heading_level:
+                    return tuple(path)
+            return None
+
+        def should_split(
+            previous_heading_path: list[tuple[int, str]],
+            next_heading_path: list[tuple[int, str]],
+        ) -> bool:
+            previous_key = section_key(previous_heading_path)
+            next_key = section_key(next_heading_path)
+            if previous_key == next_key:
+                return False
+            if previous_key is None and next_key is not None:
+                return False
+            return True
 
         def close_chunk():
             nonlocal buf, buf_units, buf_unit_indices, buf_tokens, last_para_for_overlap
             if not buf:
                 return
-            heading_path = buf_units[-1].heading_path if buf_units else []
+            owned_units = [
+                unit for unit, index in zip(buf_units, buf_unit_indices, strict=False) if index >= 0
+            ]
+            heading_path = owned_units[-1].heading_path if owned_units else []
             body = "\n\n".join(buf).strip()
             last_para_for_overlap = None
-            for u in reversed(buf_units):
+            for u in reversed(owned_units):
                 if u.kind == "para":
-                    last_para_for_overlap = u.text
+                    last_para_for_overlap = (u.text, u.heading_path)
                     break
             if buf_unit_indices:
-                start_unit = min(buf_unit_indices)
-                end_unit = max(buf_unit_indices) + 1
+                owned_indices = [index for index in buf_unit_indices if index >= 0]
+                start_unit = min(owned_indices)
+                end_unit = max(owned_indices) + 1
             else:
                 start_unit = end_unit = 0
             chunks.append(
@@ -218,24 +264,44 @@ class MarkdownChunker:
             )
             buf, buf_units, buf_unit_indices, buf_tokens = [], [], [], 0
 
+        def add_overlap_if_allowed(heading_path: list[tuple[int, str]]) -> None:
+            nonlocal buf_tokens
+            if not last_para_for_overlap:
+                return
+            overlap_text, overlap_heading_path = last_para_for_overlap
+            if section_key(overlap_heading_path) != section_key(heading_path):
+                return
+            ov = count_tokens(overlap_text)
+            if ov <= self.overlap:
+                buf.append(overlap_text)
+                buf_units.append(
+                    Unit(
+                        kind="para",
+                        text=overlap_text,
+                        lang=None,
+                        heading_path=overlap_heading_path,
+                    )
+                )
+                buf_unit_indices.append(-1)
+                buf_tokens += ov
+
         for unit_index, u in enumerate(units):
             u_tokens = count_tokens(u.text)
 
             # Prepend last para if next unit is para as well (paragraph-only overlap)
             if not buf:
-                if last_para_for_overlap and u.kind == "para":
-                    ov = count_tokens(last_para_for_overlap)
-                    if ov <= self.overlap:
-                        buf.append(last_para_for_overlap)
-                        buf_units.append(
-                            Unit(
-                                kind="para",
-                                text=last_para_for_overlap,
-                                lang=None,
-                                heading_path=u.heading_path,
-                            )
-                        )
-                        buf_tokens += ov
+                if u.kind == "para":
+                    add_overlap_if_allowed(u.heading_path)
+                buf.append(u.text)
+                buf_units.append(u)
+                buf_unit_indices.append(unit_index)
+                buf_tokens += u_tokens
+                continue
+
+            if buf_units and should_split(buf_units[-1].heading_path, u.heading_path):
+                close_chunk()
+                if u.kind == "para":
+                    add_overlap_if_allowed(u.heading_path)
                 buf.append(u.text)
                 buf_units.append(u)
                 buf_unit_indices.append(unit_index)
@@ -244,19 +310,8 @@ class MarkdownChunker:
 
             if buf_tokens + u_tokens > self.max_tokens:
                 close_chunk()
-                if last_para_for_overlap and u.kind == "para":
-                    ov = count_tokens(last_para_for_overlap)
-                    if ov <= self.overlap:
-                        buf.append(last_para_for_overlap)
-                        buf_units.append(
-                            Unit(
-                                kind="para",
-                                text=last_para_for_overlap,
-                                lang=None,
-                                heading_path=u.heading_path,
-                            )
-                        )
-                        buf_tokens += ov
+                if u.kind == "para":
+                    add_overlap_if_allowed(u.heading_path)
                 buf.append(u.text)
                 buf_units.append(u)
                 buf_unit_indices.append(unit_index)
@@ -265,19 +320,7 @@ class MarkdownChunker:
 
             if buf_tokens + u_tokens > self.target and u.kind == "para":
                 close_chunk()
-                if last_para_for_overlap:
-                    ov = count_tokens(last_para_for_overlap)
-                    if ov <= self.overlap:
-                        buf.append(last_para_for_overlap)
-                        buf_units.append(
-                            Unit(
-                                kind="para",
-                                text=last_para_for_overlap,
-                                lang=None,
-                                heading_path=u.heading_path,
-                            )
-                        )
-                        buf_tokens += ov
+                add_overlap_if_allowed(u.heading_path)
                 buf.append(u.text)
                 buf_units.append(u)
                 buf_unit_indices.append(unit_index)

@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from tqdm import tqdm
 
-from agora.chunking import Chunk, MarkdownChunker
+from agora.chunking import Chunk, ChunkSpan, MarkdownChunker, Unit
 from agora.embeddings.named import ConfiguredNamedVectorEncoder
 from agora.sources.loader import load_sources_config, resolve_sources_config
 from agora.sources.registry import build_source
@@ -62,6 +62,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--target-tokens", type=int, default=800)
     p.add_argument("--overlap-tokens", type=int, default=120)
     p.add_argument("--max-tokens", type=int, default=1200)
+    p.add_argument(
+        "--split-heading-level",
+        type=int,
+        choices=range(1, 7),
+        metavar="{1..6}",
+        help=(
+            "Exact Markdown heading level that defines section chunk boundaries. "
+            "If omitted, any heading path change splits chunks."
+        ),
+    )
 
     return p
 
@@ -171,6 +181,59 @@ def _chunk_metadata(
     }
 
 
+def _embedding_text(chunk: Chunk) -> str:
+    breadcrumbs = chunk.metadata.get("breadcrumbs")
+    headings = (
+        [str(item).strip() for item in breadcrumbs if isinstance(item, str) and item.strip()]
+        if isinstance(breadcrumbs, list)
+        else []
+    )
+    if not headings:
+        doc_title = chunk.metadata.get("doc_title")
+        if isinstance(doc_title, str) and doc_title.strip():
+            headings = [doc_title.strip()]
+
+    if not headings:
+        return chunk.text
+    return f"{' > '.join(headings)}\n\n{chunk.text}"
+
+
+def _heading_paths_for_span(units: list[Unit], span: ChunkSpan) -> list[list[tuple[int, str]]]:
+    paths: list[list[tuple[int, str]]] = []
+    seen: set[tuple[tuple[int, str], ...]] = set()
+    for unit in units[span.start_unit : span.end_unit]:
+        path_key = tuple(unit.heading_path)
+        if path_key in seen:
+            continue
+        seen.add(path_key)
+        paths.append(unit.heading_path)
+    return paths
+
+
+def _headings_from_path(heading_path: list[tuple[int, str]]) -> list[str]:
+    return [title for _, title in heading_path if title and title.strip()]
+
+
+def _parent_text_with_headings(units: list[Unit], span: ChunkSpan) -> str:
+    parts: list[str] = []
+    previous_path: list[tuple[int, str]] = []
+
+    for unit in units[span.start_unit : span.end_unit]:
+        if unit.heading_path != previous_path:
+            common = 0
+            for previous_item, current_item in zip(previous_path, unit.heading_path, strict=False):
+                if previous_item != current_item:
+                    break
+                common += 1
+            for level, title in unit.heading_path[common:]:
+                if title and title.strip():
+                    parts.append(f"{'#' * level} {title.strip()}")
+            previous_path = unit.heading_path
+        parts.append(unit.text)
+
+    return "\n\n".join(parts).strip()
+
+
 def _parent_index_for_child(
     child_start: int,
     child_end: int,
@@ -252,12 +315,18 @@ def main(argv: list[str] | None = None) -> None:
     print(f"[info] Source='{src_name}': discovered {len(docs)} documents")
 
     # 5) Chunk
-    chunker = MarkdownChunker(args.target_tokens, args.overlap_tokens, args.max_tokens)
+    chunker = MarkdownChunker(
+        args.target_tokens,
+        args.overlap_tokens,
+        args.max_tokens,
+        split_heading_level=args.split_heading_level,
+    )
     _validate_parent_storage_config(cfg, args)
     parent_chunker = MarkdownChunker(
         cfg.parent_target_tokens,
         cfg.parent_overlap_tokens,
         cfg.parent_max_tokens,
+        split_headings=False,
     )
     parent_storage_enabled = cfg.parent_storage_mode != "none"
     chunks: list[Chunk] = []
@@ -269,6 +338,8 @@ def main(argv: list[str] | None = None) -> None:
         if parent_storage_enabled:
             parent_spans = parent_chunker.chunk_spans(units)
             for parent_idx, parent_span in enumerate(parent_spans):
+                parent_text = _parent_text_with_headings(units, parent_span)
+                parent_heading_paths = _heading_paths_for_span(units, parent_span)
                 parent_id = make_parent_chunk_id(
                     rec.metadata.get("file_path", ""),
                     parent_idx,
@@ -276,14 +347,15 @@ def main(argv: list[str] | None = None) -> None:
                 )
                 parent_meta = _chunk_metadata(
                     rec.metadata,
-                    parent_span.text,
+                    parent_text,
                     parent_span.heading_path,
                     parent_idx,
                     index_key="parent_chunk_index",
                 )
-                parent_chunks.append(
-                    Chunk(id=parent_id, text=parent_span.text, metadata=parent_meta)
-                )
+                parent_meta["breadcrumb_paths"] = [
+                    _headings_from_path(path) for path in parent_heading_paths
+                ]
+                parent_chunks.append(Chunk(id=parent_id, text=parent_text, metadata=parent_meta))
                 parent_ids.append(parent_id)
                 parent_ranges.append((parent_span.start_unit, parent_span.end_unit))
 
@@ -319,7 +391,7 @@ def main(argv: list[str] | None = None) -> None:
         insecure=bool(args.insecure),
         default_lang=getattr(cfg, "default_lang", None),
     )
-    texts = [c.text for c in chunks]
+    texts = [_embedding_text(c) for c in chunks]
     vector_modes = ingestion_config.vector_index.vectors
     with tqdm(total=len(vector_modes), desc="Embedding", unit="mode") as pbar:
         named_vectors = enc.encode(texts, batch_size=args.batch_size)

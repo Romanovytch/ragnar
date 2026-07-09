@@ -43,6 +43,25 @@ def test_dense_only_point_shape_uses_named_vector_and_preserves_payload():
     assert points[0].payload == {"n": 1, "text": "alpha beta"}
 
 
+def test_point_payload_keeps_raw_text_without_embedding_text():
+    chunks = [
+        Chunk(
+            id="11111111-1111-5111-8111-111111111111",
+            text="Run this command.",
+            metadata={"breadcrumbs": ["Doc", "Install"]},
+        )
+    ]
+    config = VectorIndexConfig(vectors=[DenseVectorConfig(name="dense", size=2)])
+    vectors = {"dense": np.array([[1.0, 2.0]], dtype="float32")}
+
+    points = build_named_points(chunks, config, vectors, {"dense": 2})
+
+    assert points[0].payload == {
+        "breadcrumbs": ["Doc", "Install"],
+        "text": "Run this command.",
+    }
+
+
 def test_hybrid_point_shape_uses_same_point_identity_for_all_vectors():
     chunks = _chunks()
     config = VectorIndexConfig(
