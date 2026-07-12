@@ -10,6 +10,7 @@ from agora.summary import (
     SummaryResult,
     build_summary_chunks,
     build_summary_prompt,
+    generate_summary,
     group_chunks_for_summary,
     parse_summary_response,
 )
@@ -75,6 +76,40 @@ def test_parse_summary_response_caps_sentences_from_config():
 
     assert result.summary == "One. Two."
     assert result.keywords == ["alpha", "beta"]
+
+
+
+
+def test_parse_summary_response_extracts_json_from_extra_text():
+    result = parse_summary_response(
+        'Here is the JSON: {"summary": "One.", "keywords": ["alpha"]} Thanks.',
+        max_sentences=2,
+    )
+
+    assert result.summary == "One."
+    assert result.keywords == ["alpha"]
+
+
+def test_generate_summary_repairs_invalid_json_response():
+    class FakeClient:
+        def __init__(self):
+            self.calls = []
+
+        def complete_json(self, messages):
+            self.calls.append(messages)
+            if len(self.calls) == 1:
+                return '{"summary": "One", "keywords": ["alpha" "beta"]}'
+            return '{"summary": "One.", "keywords": ["alpha", "beta"]}'
+
+    client = FakeClient()
+    group = group_chunks_for_summary([_chunk(0)], max_tokens=100)[0]
+
+    result = generate_summary(client, group, max_sentences=1)
+
+    assert result.summary == "One."
+    assert result.keywords == ["alpha", "beta"]
+    assert len(client.calls) == 2
+    assert "repair" in client.calls[1][0]["content"].lower()
 
 
 def test_build_summary_chunks_preserves_raw_payload_shape_and_adds_summary_fields():

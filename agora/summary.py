@@ -132,7 +132,42 @@ def group_chunks_for_summary(chunks: list[Chunk], max_tokens: int) -> list[Summa
 
 def generate_summary(client: RemoteOpenAIChatClient, group: SummaryChunkGroup, max_sentences: int):
     prompt = build_summary_prompt(group.text, max_sentences=max_sentences)
-    return parse_summary_response(client.complete_json(prompt), max_sentences=max_sentences)
+    content = client.complete_json(prompt)
+    try:
+        return parse_summary_response(content, max_sentences=max_sentences)
+    except ValueError as first_error:
+        repair_prompt = build_summary_repair_prompt(content, max_sentences=max_sentences)
+        repaired = client.complete_json(repair_prompt)
+        try:
+            return parse_summary_response(repaired, max_sentences=max_sentences)
+        except ValueError as second_error:
+            snippet = _compact_response_snippet(repaired or content)
+            raise ValueError(
+                "LLM summary response must be valid JSON after repair attempt. "
+                f"Last response snippet: {snippet}"
+            ) from second_error
+        finally:
+            del first_error
+
+
+def build_summary_repair_prompt(content: str, max_sentences: int) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": "You repair malformed JSON. Return only valid JSON.",
+        },
+        {
+            "role": "user",
+            "content": (
+                "The following LLM response was intended to be JSON with exactly "
+                'this shape: {"summary": "...", "keywords": ["..."]}.\n'
+                "Rewrite it as valid JSON only. Do not add markdown fences or comments.\n"
+                f"Keep summary to at most {max_sentences} sentences.\n\n"
+                "Malformed response:\n"
+                f"{content}"
+            ),
+        },
+    ]
 
 
 def parse_summary_response(content: str, max_sentences: int) -> SummaryResult:
@@ -140,7 +175,13 @@ def parse_summary_response(content: str, max_sentences: int) -> SummaryResult:
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as e:
-        raise ValueError("LLM summary response must be valid JSON") from e
+        extracted = _extract_json_object(raw)
+        if extracted is None:
+            raise ValueError("LLM summary response must be valid JSON") from e
+        try:
+            data = json.loads(extracted)
+        except json.JSONDecodeError as extracted_error:
+            raise ValueError("LLM summary response must be valid JSON") from extracted_error
 
     summary = data.get("summary")
     keywords = data.get("keywords")
@@ -200,6 +241,21 @@ def _strip_json_fence(content: str) -> str:
         content = re.sub(r"^```(?:json)?\s*", "", content, count=1)
         content = re.sub(r"\s*```$", "", content, count=1)
     return content
+
+
+def _extract_json_object(content: str) -> str | None:
+    start = content.find("{")
+    end = content.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    return content[start : end + 1]
+
+
+def _compact_response_snippet(content: str, max_chars: int = 500) -> str:
+    snippet = re.sub(r"\s+", " ", content).strip()
+    if len(snippet) <= max_chars:
+        return snippet
+    return snippet[:max_chars] + "..."
 
 
 def _limit_sentences(summary: str, max_sentences: int) -> str:
