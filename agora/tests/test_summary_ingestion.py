@@ -9,6 +9,7 @@ from agora.sources.models.base import DenseVectorConfig, SparseVectorConfig, Vec
 from agora.summary import (
     SummaryResult,
     build_summary_chunks,
+    build_summary_embedding_text,
     build_summary_prompt,
     generate_summary,
     group_chunks_for_summary,
@@ -66,6 +67,7 @@ def test_summary_prompt_requires_json_summary_keywords_and_sentence_limit():
     assert "at most 2 sentences" in prompt
     assert "correlated keywords" in prompt
     assert "Return only valid JSON" in prompt
+    assert "same language as the source text" in prompt
 
 
 def test_parse_summary_response_caps_sentences_from_config():
@@ -112,8 +114,8 @@ def test_generate_summary_repairs_invalid_json_response():
     assert "repair" in client.calls[1][0]["content"].lower()
 
 
-def test_build_summary_chunks_preserves_raw_payload_shape_and_adds_summary_fields():
-    chunks = [_chunk(0), _chunk(1)]
+def test_build_summary_chunks_separates_retrieval_and_ordered_source_content():
+    chunks = [_chunk(0, "First original child."), _chunk(1, "Second original child.")]
     groups = group_chunks_for_summary(chunks, max_tokens=100)
     summary_chunks = build_summary_chunks(
         groups,
@@ -122,7 +124,10 @@ def test_build_summary_chunks_preserves_raw_payload_shape_and_adds_summary_field
 
     summary = summary_chunks[0]
 
-    assert summary.text == "Concise technical summary."
+    assert summary.text == "First original child.\n\n---\n\nSecond original child."
+    assert build_summary_embedding_text(summary) == (
+        "Concise technical summary.\n\nalpha, concept"
+    )
     assert summary.metadata["source"] == chunks[0].metadata["source"]
     assert summary.metadata["source_type"] == chunks[0].metadata["source_type"]
     assert summary.metadata["file_path"] == chunks[0].metadata["file_path"]
@@ -156,7 +161,7 @@ def test_summary_points_use_separate_collection_and_named_dense_sparse_vectors()
     points = build_named_points(summary_chunks, config, vectors, {"dense": 2})
 
     assert set(points[0].vector) == {"dense", "sparse"}
-    assert points[0].payload["text"] == "Summary text."
+    assert points[0].payload["text"] == chunks[0].text
     assert points[0].payload["summary"] == "Summary text."
     assert points[0].payload["keywords"] == ["summary"]
     assert points[0].payload["source_chunk_ids"] == [chunks[0].id]

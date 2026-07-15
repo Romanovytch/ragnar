@@ -86,6 +86,7 @@ def build_summary_prompt(text: str, max_sentences: int) -> list[dict[str, str]]:
             "role": "user",
             "content": (
                 "Generate a concise summary of the provided text.\n"
+                "Write both the summary and keywords in the same language as the source text.\n"
                 "Preserve important concepts, entities, technical terms, and relevant "
                 "expressions.\n"
                 "Avoid vague or generic summaries.\n"
@@ -213,16 +214,33 @@ def build_summary_chunks(
             if "chunk_index" in chunk.metadata
         ]
         summary_id = _make_summary_id(source_chunk_ids)
+        source_text = "\n\n---\n\n".join(chunk.text for chunk in group.chunks)
         metadata = first.metadata | {
             "summary": result.summary,
             "keywords": result.keywords,
             "source_chunk_ids": source_chunk_ids,
             "source_chunk_indexes": source_chunk_indexes,
             "summary_index": idx,
-            "token_count": count_tokens(result.summary),
+            "token_count": count_tokens(source_text),
         }
-        summary_chunks.append(Chunk(id=summary_id, text=result.summary, metadata=metadata))
+        summary_chunks.append(Chunk(id=summary_id, text=source_text, metadata=metadata))
     return summary_chunks
+
+
+def build_summary_embedding_text(chunk: Chunk) -> str:
+    """Return generated retrieval content while keeping source text for generation."""
+    summary = chunk.metadata.get("summary")
+    keywords = chunk.metadata.get("keywords")
+    if not isinstance(summary, str) or not summary.strip():
+        raise ValueError("summary chunk metadata must include a non-empty 'summary'")
+    clean_keywords = (
+        [keyword.strip() for keyword in keywords if isinstance(keyword, str) and keyword.strip()]
+        if isinstance(keywords, list)
+        else []
+    )
+    if not clean_keywords:
+        return summary.strip()
+    return f"{summary.strip()}\n\n{', '.join(clean_keywords)}"
 
 
 def _make_group(chunks: list[Chunk], token_count: int) -> SummaryChunkGroup:

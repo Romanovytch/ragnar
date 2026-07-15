@@ -10,6 +10,14 @@ The markdown ingestion pipeline runs via the `agora-ingest` CLI, which loads `so
 
 The pipeline’s output is a Qdrant collection with named vector representations per chunk. The default is a named dense vector, and configurations can add sparse and multi-vector representations on the same point while preserving the chunk id and payload metadata plus the raw chunk text. (agora/vectorstores/qdrant_store.py, agora/embeddings/named.py)
 
+Sources can optionally enable `synthetic_llm_summary`. This leaves the regular ingestion
+path unchanged and creates a sibling `<collection>_summaries` collection. A configurable
+OpenAI-compatible chat endpoint requests a same-language summary and keywords. Those
+generated fields form the retrieval embedding input, while each summary point's payload
+`text` contains the ordered original child texts separated by Markdown thematic breaks.
+Metadata preserves `summary`, `keywords`, `source_chunk_ids`, and
+`source_chunk_indexes`. (agora/summary.py, agora/cli/ingest.py)
+
 Sources can opt into parent storage with `parent_storage_mode: classic`. In that mode, the regular child chunks are still embedded and upserted to the main collection with deterministic UUIDv5 IDs. Each child payload additionally contains `parent_id`, which points at a larger parent chunk stored as a payload-only point in a dedicated `<collection>_parents` collection. Parent chunks are token-budgeted but do not split on heading boundaries, so they may span multiple Markdown heading paths. To preserve generation context, parent payload text re-inserts Markdown heading lines before each covered section and stores all covered paths in `breadcrumb_paths`. Parent points do not contain vectors; their payload includes a stable queryable `chunk_id` field equal to the parent point id. The Qdrant store also exposes a helper to fetch parent payload points from child search hits. The default `parent_storage_mode: none` preserves classic chunk-only ingestion. (agora/cli/ingest.py, agora/vectorstores/qdrant_store.py, agora/util.py)
 
 ## Repository layout

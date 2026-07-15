@@ -15,6 +15,7 @@ from agora.sources.registry import build_source
 from agora.summary import (
     RemoteOpenAIChatClient,
     build_summary_chunks,
+    build_summary_embedding_text,
     generate_summary,
     group_chunks_for_summary,
 )
@@ -482,7 +483,7 @@ def main(argv: list[str] | None = None) -> None:
         batch_size=args.qdrant_batch_size,
     )
     if summary_chunks:
-        summary_texts = [c.text for c in summary_chunks]
+        summary_texts = [build_summary_embedding_text(c) for c in summary_chunks]
         with tqdm(total=len(vector_modes), desc="Embedding summaries", unit="mode") as pbar:
             summary_vectors = enc.encode(summary_texts, batch_size=args.batch_size)
             pbar.update(len(vector_modes))
