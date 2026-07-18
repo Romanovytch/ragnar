@@ -69,6 +69,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--llm-api-base", help="LLM API base, e.g. https://vllm.example/v1")
     p.add_argument("--llm-model", help="LLM model id for synthetic summaries")
     p.add_argument("--llm-api-key", default="", help="LLM API key (optional)")
+    p.add_argument(
+        "--llm-timeout",
+        type=float,
+        default=60.0,
+        help="Timeout in seconds for one summary request (default: 60)",
+    )
+    p.add_argument(
+        "--llm-max-output-tokens",
+        type=int,
+        default=512,
+        help="Maximum tokens generated for one summary (default: 512)",
+    )
 
     # Chunking knobs (can later be driven by YAML policy)
     p.add_argument("--target-tokens", type=int, default=800)
@@ -286,6 +298,34 @@ def _validate_summary_config(cfg: object, args: argparse.Namespace) -> None:
         )
     if cfg.synthetic_llm_summary_max_sentences <= 0:
         raise SystemExit("[!] synthetic_llm_summary_max_sentences must be positive.")
+    if args.llm_timeout <= 0:
+        raise SystemExit("[!] --llm-timeout must be positive.")
+    if args.llm_max_output_tokens <= 0:
+        raise SystemExit("[!] --llm-max-output-tokens must be positive.")
+
+
+def _generate_summaries(
+    llm: RemoteOpenAIChatClient,
+    groups: list,
+    max_sentences: int,
+) -> list:
+    results = []
+    with tqdm(groups, desc="Summarizing", unit="group") as progress:
+        for index, group in enumerate(progress, start=1):
+            file_path = group.chunks[0].metadata.get("file_path", "<unknown>")
+            progress.set_postfix_str(
+                f"file={Path(file_path).name}, tokens={group.token_count}",
+                refresh=True,
+            )
+            try:
+                results.append(generate_summary(llm, group, max_sentences=max_sentences))
+            except Exception as exc:
+                raise RuntimeError(
+                    "Synthetic summary failed for "
+                    f"group {index}/{len(groups)}, file={file_path}, "
+                    f"input_tokens={group.token_count}: {exc}"
+                ) from exc
+    return results
 
 
 def _parent_collection_name(collection: str) -> str:
@@ -420,20 +460,19 @@ def main(argv: list[str] | None = None) -> None:
             api_base=llm_api_base,
             model=llm_model,
             api_key=llm_api_key,
+            timeout=args.llm_timeout,
+            max_output_tokens=args.llm_max_output_tokens,
             insecure=bool(args.insecure),
         )
         summary_groups = group_chunks_for_summary(
             chunks,
             max_tokens=cfg.synthetic_llm_summary_group_max_tokens,
         )
-        summary_results = [
-            generate_summary(
-                llm,
-                group,
-                max_sentences=cfg.synthetic_llm_summary_max_sentences,
-            )
-            for group in tqdm(summary_groups, desc="Summarizing", unit="group")
-        ]
+        summary_results = _generate_summaries(
+            llm,
+            summary_groups,
+            max_sentences=cfg.synthetic_llm_summary_max_sentences,
+        )
         summary_chunks = build_summary_chunks(summary_groups, summary_results)
         print(f"[info] Produced {len(summary_chunks)} synthetic summary chunks")
 

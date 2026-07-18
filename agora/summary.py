@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-import requests
+from openai import DefaultHttpxClient, OpenAI
 
 from agora.chunking import Chunk
 from agora.util import count_tokens
@@ -26,51 +26,49 @@ class SummaryResult:
 
 
 class RemoteOpenAIChatClient:
-    """Minimal client for OpenAI-compatible `/v1/chat/completions`."""
+    """OpenAI SDK client configured for an OpenAI-compatible chat endpoint."""
 
     def __init__(
         self,
         api_base: str,
         model: str,
         api_key: str = "",
-        timeout: float = 120.0,
+        timeout: float = 60.0,
+        max_output_tokens: int = 512,
         insecure: bool = False,
     ) -> None:
         if not api_base or not api_base.startswith(("http://", "https://")):
             raise ValueError("api_base must start with http(s)://")
-        self.url = api_base.rstrip("/") + "/chat/completions"
         self.model = model
-        self.api_key = api_key
-        self.timeout = timeout
-        self.verify = not insecure
-        self._session = requests.Session()
+        self.max_output_tokens = max_output_tokens
+        self._client = OpenAI(
+            base_url=api_base.rstrip("/") + "/",
+            api_key=api_key or "not-needed",
+            timeout=timeout,
+            # Keep local Ollama failures bounded and visible. Otherwise the
+            # OpenAI SDK retries timeouts internally before returning.
+            max_retries=0,
+            http_client=DefaultHttpxClient(verify=not insecure),
+        )
 
     def complete_json(self, messages: list[dict[str, str]]) -> str:
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": 0,
-            "response_format": {"type": "json_object"},
-        }
-        response = self._session.post(
-            self.url,
-            json=payload,
-            headers=headers,
-            timeout=self.timeout,
-            verify=self.verify,
-        )
-        if response.status_code != 200:
-            raise RuntimeError(f"LLM API {response.status_code}: {response.text[:500]}")
-        choices = response.json().get("choices") or []
-        if not choices:
-            raise RuntimeError("LLM API returned no choices")
-        content = choices[0].get("message", {}).get("content")
-        if not isinstance(content, str) or not content.strip():
-            raise RuntimeError("LLM API returned an empty message")
-        return content
+        for attempt in range(2):
+            response = self._client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0,
+                max_tokens=self.max_output_tokens,
+                response_format={"type": "json_object"},
+                reasoning_effort="none",
+            )
+            choices = response.choices
+            if choices:
+                content = choices[0].message.content
+                if isinstance(content, str) and content.strip():
+                    return content
+            if attempt == 0:
+                print("[warn] LLM API returned an empty message; retrying once")
+        raise RuntimeError("LLM API returned an empty message after retry")
 
 
 def build_summary_prompt(text: str, max_sentences: int) -> list[dict[str, str]]:

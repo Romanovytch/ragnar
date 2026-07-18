@@ -10,6 +10,7 @@ dependencies = [
   "markdown-it-py>=3.0.0",
   "PyYAML>=6.0.1",
   "numpy>=1.26.0",
+  "openai>=1.0.0",
   "requests>=2.31.0",
   "fastembed>=0.8.0",
   "tiktoken>=0.7.0",
