@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+from unittest.mock import patch
+
 import numpy as np
 
 from agora.chunking import Chunk
@@ -7,6 +10,7 @@ from agora.cli.ingest import _summary_collection_name
 from agora.embeddings.named import SparseVectorData
 from agora.sources.models.base import DenseVectorConfig, SparseVectorConfig, VectorIndexConfig
 from agora.summary import (
+    RemoteOpenAIChatClient,
     SummaryResult,
     build_summary_chunks,
     build_summary_embedding_text,
@@ -70,6 +74,66 @@ def test_summary_prompt_requires_json_summary_keywords_and_sentence_limit():
     assert "same language as the source text" in prompt
 
 
+def test_remote_chat_client_uses_openai_sdk_with_custom_base_url():
+    response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content='{"summary": "One."}'))]
+    )
+
+    with (
+        patch("agora.summary.DefaultHttpxClient") as http_client_cls,
+        patch("agora.summary.OpenAI") as openai_cls,
+    ):
+        openai_cls.return_value.chat.completions.create.return_value = response
+        client = RemoteOpenAIChatClient(
+            api_base="http://127.0.0.1:11434/v1",
+            model="qwen3.5:9b",
+            insecure=True,
+        )
+
+        content = client.complete_json([{"role": "user", "content": "Summarize"}])
+
+    http_client_cls.assert_called_once_with(verify=False)
+    openai_cls.assert_called_once_with(
+        base_url="http://127.0.0.1:11434/v1/",
+        api_key="not-needed",
+        timeout=60.0,
+        max_retries=0,
+        http_client=http_client_cls.return_value,
+    )
+    openai_cls.return_value.chat.completions.create.assert_called_once_with(
+        model="qwen3.5:9b",
+        messages=[{"role": "user", "content": "Summarize"}],
+        temperature=0,
+        max_tokens=512,
+        response_format={"type": "json_object"},
+        reasoning_effort="none",
+    )
+    assert content == '{"summary": "One."}'
+
+
+def test_remote_chat_client_retries_an_empty_response_once():
+    empty_response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=""))])
+    valid_response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content='{"summary": "Retried."}'))]
+    )
+
+    with (
+        patch("agora.summary.DefaultHttpxClient"),
+        patch("agora.summary.OpenAI") as openai_cls,
+    ):
+        create = openai_cls.return_value.chat.completions.create
+        create.side_effect = [empty_response, valid_response]
+        client = RemoteOpenAIChatClient(
+            api_base="http://127.0.0.1:11434/v1",
+            model="qwen3.5:9b",
+        )
+
+        content = client.complete_json([{"role": "user", "content": "Summarize"}])
+
+    assert create.call_count == 2
+    assert content == '{"summary": "Retried."}'
+
+
 def test_parse_summary_response_caps_sentences_from_config():
     result = parse_summary_response(
         '{"summary": "One. Two. Three.", "keywords": ["alpha", " beta "]}',
@@ -78,8 +142,6 @@ def test_parse_summary_response_caps_sentences_from_config():
 
     assert result.summary == "One. Two."
     assert result.keywords == ["alpha", "beta"]
-
-
 
 
 def test_parse_summary_response_extracts_json_from_extra_text():
@@ -125,9 +187,7 @@ def test_build_summary_chunks_separates_retrieval_and_ordered_source_content():
     summary = summary_chunks[0]
 
     assert summary.text == "First original child.\n\n---\n\nSecond original child."
-    assert build_summary_embedding_text(summary) == (
-        "Concise technical summary.\n\nalpha, concept"
-    )
+    assert build_summary_embedding_text(summary) == ("Concise technical summary.\n\nalpha, concept")
     assert summary.metadata["source"] == chunks[0].metadata["source"]
     assert summary.metadata["source_type"] == chunks[0].metadata["source_type"]
     assert summary.metadata["file_path"] == chunks[0].metadata["file_path"]

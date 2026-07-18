@@ -9,6 +9,7 @@ from agora.cli.ingest import (
     _chunk_metadata,
     _drop_parent_collection_if_requested,
     _embedding_text,
+    _generate_summaries,
     _heading_paths_for_span,
     _parent_collection_name,
     _parent_text_with_headings,
@@ -38,6 +39,8 @@ def test_cli_parse_minimum_ok():
     assert ns.collection == "utilitr_v1"
     assert ns.source is None
     assert ns.qdrant_batch_size == 16
+    assert ns.llm_timeout == 60.0
+    assert ns.llm_max_output_tokens == 512
     assert ns.split_heading_level is None
 
 
@@ -265,3 +268,21 @@ def test_summary_config_validation_requires_larger_group_budget():
 
 def test_summary_collection_name_uses_sibling_collection():
     assert _summary_collection_name("kb") == "kb_summaries"
+
+
+def test_generate_summaries_reports_the_failing_group_and_file(monkeypatch):
+    group = SimpleNamespace(
+        chunks=[SimpleNamespace(metadata={"file_path": "docs/problem.qmd"})],
+        token_count=2865,
+    )
+
+    def fail(*args, **kwargs):
+        raise TimeoutError("timed out")
+
+    monkeypatch.setattr("agora.cli.ingest.generate_summary", fail)
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"group 1/1, file=docs/problem.qmd, input_tokens=2865",
+    ):
+        _generate_summaries(object(), [group], max_sentences=3)
