@@ -12,6 +12,13 @@ from agora.chunking import Chunk, ChunkSpan, MarkdownChunker, Unit
 from agora.embeddings.named import ConfiguredNamedVectorEncoder
 from agora.sources.loader import load_sources_config, resolve_sources_config
 from agora.sources.registry import build_source
+from agora.summary import (
+    RemoteOpenAIChatClient,
+    build_summary_chunks,
+    build_summary_embedding_text,
+    generate_summary,
+    group_chunks_for_summary,
+)
 from agora.util import count_tokens, make_chunk_id, make_parent_chunk_id, slugify
 from agora.vectorstores.qdrant_store import (
     ensure_collection,
@@ -56,6 +63,23 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--embed-api-key", default="", help="Embeddings API key (optional)")
     p.add_argument(
         "--insecure", action="store_true", help="Skip TLS verify for embeddings (dev only)"
+    )
+
+    # Optional LLM summary strategy (OpenAI-compatible chat completions)
+    p.add_argument("--llm-api-base", help="LLM API base, e.g. https://vllm.example/v1")
+    p.add_argument("--llm-model", help="LLM model id for synthetic summaries")
+    p.add_argument("--llm-api-key", default="", help="LLM API key (optional)")
+    p.add_argument(
+        "--llm-timeout",
+        type=float,
+        default=60.0,
+        help="Timeout in seconds for one summary request (default: 60)",
+    )
+    p.add_argument(
+        "--llm-max-output-tokens",
+        type=int,
+        default=512,
+        help="Maximum tokens generated for one summary (default: 512)",
     )
 
     # Chunking knobs (can later be driven by YAML policy)
@@ -264,8 +288,52 @@ def _validate_parent_storage_config(cfg: object, args: argparse.Namespace) -> No
         )
 
 
+def _validate_summary_config(cfg: object, args: argparse.Namespace) -> None:
+    if not cfg.synthetic_llm_summary:
+        return
+    if cfg.synthetic_llm_summary_group_max_tokens <= args.max_tokens:
+        raise SystemExit(
+            "[!] synthetic_llm_summary_group_max_tokens must be greater than "
+            "--max-tokens when synthetic_llm_summary is enabled."
+        )
+    if cfg.synthetic_llm_summary_max_sentences <= 0:
+        raise SystemExit("[!] synthetic_llm_summary_max_sentences must be positive.")
+    if args.llm_timeout <= 0:
+        raise SystemExit("[!] --llm-timeout must be positive.")
+    if args.llm_max_output_tokens <= 0:
+        raise SystemExit("[!] --llm-max-output-tokens must be positive.")
+
+
+def _generate_summaries(
+    llm: RemoteOpenAIChatClient,
+    groups: list,
+    max_sentences: int,
+) -> list:
+    results = []
+    with tqdm(groups, desc="Summarizing", unit="group") as progress:
+        for index, group in enumerate(progress, start=1):
+            file_path = group.chunks[0].metadata.get("file_path", "<unknown>")
+            progress.set_postfix_str(
+                f"file={Path(file_path).name}, tokens={group.token_count}",
+                refresh=True,
+            )
+            try:
+                results.append(generate_summary(llm, group, max_sentences=max_sentences))
+            except Exception as exc:
+                raise RuntimeError(
+                    "Synthetic summary failed for "
+                    f"group {index}/{len(groups)}, file={file_path}, "
+                    f"input_tokens={group.token_count}: {exc}"
+                ) from exc
+    return results
+
+
 def _parent_collection_name(collection: str) -> str:
     return f"{collection}_parents"
+
+
+def _summary_collection_name(collection: str) -> str:
+    return f"{collection}_summaries"
 
 
 def _drop_parent_collection_if_requested(
@@ -306,6 +374,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # 2) Choose exactly one source
     src_name, cfg = _pick_single_source(resolved, args.source)
+    _validate_summary_config(cfg, args)
 
     # 3) Instantiate adapter from registry
     adapter = build_source(src_name, cfg)
@@ -382,6 +451,31 @@ def main(argv: list[str] | None = None) -> None:
     if parent_storage_enabled:
         print(f"[info] Produced {len(parent_chunks)} parent chunks")
 
+    summary_chunks: list[Chunk] = []
+    if cfg.synthetic_llm_summary:
+        llm_api_base = _resolve_required("llm_api_base", args.llm_api_base, "LLM_API_BASE")
+        llm_model = _resolve_required("llm_model", args.llm_model, "LLM_MODEL")
+        llm_api_key = _resolve_optional(args.llm_api_key, "LLM_API_KEY", default="")
+        llm = RemoteOpenAIChatClient(
+            api_base=llm_api_base,
+            model=llm_model,
+            api_key=llm_api_key,
+            timeout=args.llm_timeout,
+            max_output_tokens=args.llm_max_output_tokens,
+            insecure=bool(args.insecure),
+        )
+        summary_groups = group_chunks_for_summary(
+            chunks,
+            max_tokens=cfg.synthetic_llm_summary_group_max_tokens,
+        )
+        summary_results = _generate_summaries(
+            llm,
+            summary_groups,
+            max_sentences=cfg.synthetic_llm_summary_max_sentences,
+        )
+        summary_chunks = build_summary_chunks(summary_groups, summary_results)
+        print(f"[info] Produced {len(summary_chunks)} synthetic summary chunks")
+
     # 6) Encode
     enc = ConfiguredNamedVectorEncoder(
         config=ingestion_config.vector_index,
@@ -427,10 +521,43 @@ def main(argv: list[str] | None = None) -> None:
         dimensions,
         batch_size=args.qdrant_batch_size,
     )
+    if summary_chunks:
+        summary_texts = [build_summary_embedding_text(c) for c in summary_chunks]
+        with tqdm(total=len(vector_modes), desc="Embedding summaries", unit="mode") as pbar:
+            summary_vectors = enc.encode(summary_texts, batch_size=args.batch_size)
+            pbar.update(len(vector_modes))
+        validate_named_vectors(
+            summary_chunks,
+            ingestion_config.vector_index,
+            summary_vectors,
+            dimensions,
+        )
+        summary_collection = _summary_collection_name(args.collection)
+        ensure_collection(
+            client,
+            summary_collection,
+            ingestion_config.vector_index,
+            dimensions=dimensions,
+            drop=args.drop_collection,
+        )
+        upsert_named(
+            client,
+            summary_collection,
+            summary_chunks,
+            ingestion_config.vector_index,
+            summary_vectors,
+            dimensions,
+            batch_size=args.qdrant_batch_size,
+        )
 
     print(f"[ok] Ingested {len(chunks)} chunks into '{args.collection}' (source={src_name})")
     if parent_storage_enabled:
         print(f"[ok] Ingested {len(parent_chunks)} parent chunks into '{parent_collection}'")
+    if summary_chunks:
+        print(
+            f"[ok] Ingested {len(summary_chunks)} synthetic summaries "
+            f"into '{summary_collection}'"
+        )
 
 
 if __name__ == "__main__":
