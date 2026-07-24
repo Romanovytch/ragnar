@@ -12,7 +12,8 @@ The pipeline’s output is a Qdrant collection with named vector representations
 
 Sources can optionally enable `synthetic_llm_summary`. This leaves the regular ingestion
 path unchanged and creates a sibling `<collection>_summaries` collection. A configurable
-OpenAI-compatible chat endpoint requests a same-language summary and keywords. Those
+OpenAI-compatible chat endpoint requests a same-language summary and keywords through
+the shared `agora/llm/llm_client.py` adapter. Those
 generated fields form the retrieval embedding input, while each summary point's payload
 `text` contains the ordered original child texts separated by Markdown thematic breaks.
 Metadata preserves `summary`, `keywords`, `source_chunk_ids`, and
@@ -27,6 +28,7 @@ agora/
   cli/               # CLI entry points (agora/cli/ingest.py ~L19-L229, agora/cli/config.py ~L48-L67)
   chunking.py        # MarkdownChunker: parse + token-based chunking (agora/chunking.py ~L25-L267)
   embeddings/        # Remote OpenAI-compatible encoder plus named-vector adapter (agora/embeddings/remote.py, agora/embeddings/named.py)
+  llm/               # Shared provider-aware OpenAI-compatible chat adapter
   sources/           # Source config loader + markdown repo adapter (agora/sources/loader.py ~L19-L94, agora/sources/markdown_source.py ~L24-L239)
   util.py            # Token counting, frontmatter parsing, chunk ID (agora/util.py ~L12-L78)
   vectorstores/      # Qdrant collection + upsert helpers (agora/vectorstores/qdrant_store.py ~L18-L83)

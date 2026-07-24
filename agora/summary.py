@@ -6,9 +6,8 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from openai import DefaultHttpxClient, OpenAI
-
 from agora.chunking import Chunk
+from agora.llm import ChatClient
 from agora.util import count_tokens
 
 
@@ -23,52 +22,6 @@ class SummaryChunkGroup:
 class SummaryResult:
     summary: str
     keywords: list[str]
-
-
-class RemoteOpenAIChatClient:
-    """OpenAI SDK client configured for an OpenAI-compatible chat endpoint."""
-
-    def __init__(
-        self,
-        api_base: str,
-        model: str,
-        api_key: str = "",
-        timeout: float = 60.0,
-        max_output_tokens: int = 512,
-        insecure: bool = False,
-    ) -> None:
-        if not api_base or not api_base.startswith(("http://", "https://")):
-            raise ValueError("api_base must start with http(s)://")
-        self.model = model
-        self.max_output_tokens = max_output_tokens
-        self._client = OpenAI(
-            base_url=api_base.rstrip("/") + "/",
-            api_key=api_key or "not-needed",
-            timeout=timeout,
-            # Keep local Ollama failures bounded and visible. Otherwise the
-            # OpenAI SDK retries timeouts internally before returning.
-            max_retries=0,
-            http_client=DefaultHttpxClient(verify=not insecure),
-        )
-
-    def complete_json(self, messages: list[dict[str, str]]) -> str:
-        for attempt in range(2):
-            response = self._client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0,
-                max_tokens=self.max_output_tokens,
-                response_format={"type": "json_object"},
-                reasoning_effort="none",
-            )
-            choices = response.choices
-            if choices:
-                content = choices[0].message.content
-                if isinstance(content, str) and content.strip():
-                    return content
-            if attempt == 0:
-                print("[warn] LLM API returned an empty message; retrying once")
-        raise RuntimeError("LLM API returned an empty message after retry")
 
 
 def build_summary_prompt(text: str, max_sentences: int) -> list[dict[str, str]]:
@@ -129,7 +82,7 @@ def group_chunks_for_summary(chunks: list[Chunk], max_tokens: int) -> list[Summa
     return groups
 
 
-def generate_summary(client: RemoteOpenAIChatClient, group: SummaryChunkGroup, max_sentences: int):
+def generate_summary(client: ChatClient, group: SummaryChunkGroup, max_sentences: int):
     prompt = build_summary_prompt(group.text, max_sentences=max_sentences)
     content = client.complete_json(prompt)
     try:
