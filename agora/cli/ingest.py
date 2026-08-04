@@ -70,6 +70,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--llm-model", help="LLM model id for synthetic summaries")
     p.add_argument("--llm-api-key", default="", help="LLM API key (optional)")
     p.add_argument(
+        "--llm-provider-name",
+        help="Provider fallback when the LLM API base is not recognized",
+    )
+    p.add_argument(
         "--llm-timeout",
         type=float,
         default=60.0,
@@ -456,6 +460,11 @@ def main(argv: list[str] | None = None) -> None:
         llm_api_base = _resolve_required("llm_api_base", args.llm_api_base, "LLM_API_BASE")
         llm_model = _resolve_required("llm_model", args.llm_model, "LLM_MODEL")
         llm_api_key = _resolve_optional(args.llm_api_key, "LLM_API_KEY", default="")
+        llm_provider_name = _resolve_optional(
+            args.llm_provider_name,
+            "LLM_PROVIDER_NAME",
+            default="",
+        )
         llm = ChatClient(
             api_base=llm_api_base,
             model=llm_model,
@@ -466,6 +475,7 @@ def main(argv: list[str] | None = None) -> None:
             # Keep local endpoint failures bounded and visible.
             max_retries=0,
             empty_response_retries=1,
+            provider_name=llm_provider_name or None,
         )
         summary_groups = group_chunks_for_summary(
             chunks,

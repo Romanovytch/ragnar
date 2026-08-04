@@ -17,11 +17,26 @@ from agora.llm.llm_client import (
         ("http://localhost:11434/v1", "ollama"),
         ("http://localhost:11435/v1", "ollama"),
         ("http://ollama:11434/v1", "ollama"),
-        ("https://api.mistral.ai/v1", "other"),
+        ("https://api.mistral.ai/v1", "mistral"),
     ],
 )
 def test_detect_llm_provider(api_base, expected):
     assert detect_llm_provider(api_base) == expected
+
+
+def test_detect_llm_provider_uses_configured_fallback_for_unknown_host():
+    assert detect_llm_provider("https://llm.example.org/v1", " Ollama ") == "ollama"
+
+
+@pytest.mark.parametrize(
+    ("api_base", "expected"),
+    [
+        ("https://api.openai.com/v1", "openai"),
+        ("https://api.mistral.ai/v1", "mistral"),
+    ],
+)
+def test_detect_llm_provider_prefers_recognized_host_over_fallback(api_base, expected):
+    assert detect_llm_provider(api_base, "ollama") == expected
 
 
 @pytest.mark.parametrize(
@@ -33,6 +48,12 @@ def test_detect_llm_provider(api_base, expected):
 )
 def test_provider_kwargs_omit_ollama_extension_for_other_providers(api_base):
     assert build_chat_provider_kwargs(api_base, "none") == {}
+
+
+def test_provider_kwargs_use_configured_ollama_fallback():
+    assert build_chat_provider_kwargs("https://llm.example.org/v1", "medium", "ollama") == {
+        "extra_body": {"reasoning_effort": "medium"}
+    }
 
 
 def test_ollama_json_request_retries_empty_response_and_streams():
@@ -79,10 +100,12 @@ def test_insecure_client_disables_tls_verification():
         ChatClient(
             api_base="http://localhost:11434/v1",
             model="qwen3.5:9b",
+            timeout=60.0,
             insecure=True,
         )
 
-    http_client_cls.assert_called_once_with(verify=False)
+    http_client_cls.assert_called_once_with(verify=False, timeout=60.0)
+    assert openai_cls.call_args.kwargs["timeout"] == 60.0
     assert openai_cls.call_args.kwargs["http_client"] is http_client_cls.return_value
 
 
