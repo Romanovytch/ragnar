@@ -125,6 +125,8 @@ QDRANT_URL=http://qdrant:6333
 LLM_API_BASE=https://my-chat-model-url/v1
 LLM_API_KEY=api-key
 LLM_MODEL=model-name
+# Optional fallback for API bases that are not recognized as OpenAI or Mistral
+LLM_PROVIDER_NAME=ollama
 ```
 > The ingest CLI uses CLI args first, then env vars, and can also load a `.env` file via `--dotenv-path` (absolute or relative).
 

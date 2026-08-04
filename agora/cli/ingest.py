@@ -10,10 +10,10 @@ from tqdm import tqdm
 
 from agora.chunking import Chunk, ChunkSpan, MarkdownChunker, Unit
 from agora.embeddings.named import ConfiguredNamedVectorEncoder
+from agora.llm import ChatClient
 from agora.sources.loader import load_sources_config, resolve_sources_config
 from agora.sources.registry import build_source
 from agora.summary import (
-    RemoteOpenAIChatClient,
     build_summary_chunks,
     build_summary_embedding_text,
     generate_summary,
@@ -69,6 +69,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--llm-api-base", help="LLM API base, e.g. https://vllm.example/v1")
     p.add_argument("--llm-model", help="LLM model id for synthetic summaries")
     p.add_argument("--llm-api-key", default="", help="LLM API key (optional)")
+    p.add_argument(
+        "--llm-provider-name",
+        help="Provider fallback when the LLM API base is not recognized",
+    )
     p.add_argument(
         "--llm-timeout",
         type=float,
@@ -305,7 +309,7 @@ def _validate_summary_config(cfg: object, args: argparse.Namespace) -> None:
 
 
 def _generate_summaries(
-    llm: RemoteOpenAIChatClient,
+    llm: ChatClient,
     groups: list,
     max_sentences: int,
 ) -> list:
@@ -456,13 +460,22 @@ def main(argv: list[str] | None = None) -> None:
         llm_api_base = _resolve_required("llm_api_base", args.llm_api_base, "LLM_API_BASE")
         llm_model = _resolve_required("llm_model", args.llm_model, "LLM_MODEL")
         llm_api_key = _resolve_optional(args.llm_api_key, "LLM_API_KEY", default="")
-        llm = RemoteOpenAIChatClient(
+        llm_provider_name = _resolve_optional(
+            args.llm_provider_name,
+            "LLM_PROVIDER_NAME",
+            default="",
+        )
+        llm = ChatClient(
             api_base=llm_api_base,
             model=llm_model,
             api_key=llm_api_key,
             timeout=args.llm_timeout,
             max_output_tokens=args.llm_max_output_tokens,
             insecure=bool(args.insecure),
+            # Keep local endpoint failures bounded and visible.
+            max_retries=0,
+            empty_response_retries=1,
+            provider_name=llm_provider_name or None,
         )
         summary_groups = group_chunks_for_summary(
             chunks,

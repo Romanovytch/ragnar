@@ -41,7 +41,21 @@ def test_cli_parse_minimum_ok():
     assert ns.qdrant_batch_size == 16
     assert ns.llm_timeout == 60.0
     assert ns.llm_max_output_tokens == 512
+    assert ns.llm_provider_name is None
     assert ns.split_heading_level is None
+
+
+def test_cli_parse_accepts_llm_provider_name():
+    ns = build_parser().parse_args(
+        [
+            "--collection",
+            "utilitr_v1",
+            "--llm-provider-name",
+            "ollama",
+        ]
+    )
+
+    assert ns.llm_provider_name == "ollama"
 
 
 def test_cli_parse_accepts_split_heading_level():
